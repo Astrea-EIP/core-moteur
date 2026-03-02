@@ -9,7 +9,7 @@ services:
     environment:
       - JAVA_OPTS=-Xmx8g -Xms2g
     volumes:
-      - ./osm:/data/osm:ro
+      - ./osm/pdl-latest.osm.pbf:/data/map.osm.pbf:ro
       - ./config.yml:/config.yml:ro
       - ./custom_models:/data/custom_models:ro
       - gh_data:/data/graphhopper
@@ -26,6 +26,19 @@ services:
           action: sync+restart
           target: /data/custom_models
 
+  nominatim:
+    image: mediagis/nominatim:5.2
+    container_name: nominatim
+    ports:
+      - "8991:8080"
+    volumes:
+      - ./osm/pdl-latest.osm.pbf:/osm/map.osm.pbf:ro
+      - nominatim_data:/var/lib/postgresql/16/main
+    environment:
+      - PBF_PATH=/osm/map.osm.pbf
+      - THREADS=8
+
 volumes:
   gh_data:
   srtm_cache:
+  nominatim_data:

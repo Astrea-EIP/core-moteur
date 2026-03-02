@@ -1,6 +1,6 @@
 graphhopper:
 
-  datareader.file: /data/osm/france-latest.osm.pbf
+  datareader.file: /data/map.osm.pbf
   custom_models.directory: /data/custom_models
   graph.location: /data/graphhopper
 
@@ -41,3 +41,4 @@ server:
     - type: http
       port: 8990
       bind_host: 0.0.0.0
+
