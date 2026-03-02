@@ -1,9 +1,3 @@
-# Check if docker and docker-compose are installed
-check:
-    @command -v docker > /dev/null 2>&1 || (echo "Error: docker is not installed" && exit 1)
-    @command -v docker-compose > /dev/null 2>&1 || (echo "Error: docker-compose is not installed" && exit 1)
-    @echo "docker and docker-compose are installed"
-
 # Start the containers, if "version" is set to "dev", then the docker-compose.dev.yml will be used
 run version="prod": check
     #!/usr/bin/env bash
@@ -13,18 +7,26 @@ run version="prod": check
         docker-compose up -d
     fi
 
+# Check if docker and docker-compose are installed
+check:
+    @command -v docker > /dev/null 2>&1 || (echo "Error: docker is not installed" && exit 1)
+    @command -v docker-compose > /dev/null 2>&1 || (echo "Error: docker-compose is not installed" && exit 1)
+
 # Stop the containers
-stop:
+stop: check
     docker-compose down
 
 # Stop the contains and remove the volumes
-clean:
+clean: check
     docker-compose down -v
 
 # Run with a fresh image
-build:
+build: check
     docker-compose build --no-cache
     just run
+
+logs: check
+    docker-compose logs -f
 
 # Download the latest OSM PBF files and place them in the "osm" directory
 download-osm continent="europe" country="france" zone="":

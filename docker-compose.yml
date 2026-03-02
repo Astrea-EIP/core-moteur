@@ -1,7 +1,7 @@
 services:
   graphhopper:
     build:
-      context: .
+      context: graphhopper
       dockerfile: Dockerfile
       args:
         GH_VERSION: "11.0"
@@ -12,9 +12,9 @@ services:
       - JAVA_OPTS=-Xmx8g -Xms2g # Max memory : 8GB, initial memory: 2GB
 
     volumes:
-      - ./osm/pdl-latest.osm.pbf:/data/map.osm.pbf:ro
-      - ./config.yml:/config.yml:ro
-      - ./custom_models:/data/custom_models:ro
+      - ./graphhopper/osm/pays-de-la-loire-latest.osm.pbf:/data/map.osm.pbf:ro
+      - ./graphhopper/config.yml:/config.yml:ro
+      - ./graphhopper/custom_models:/data/custom_models:ro
       - gh_data:/data/graphhopper
       - srtm_cache:/data/srtm_cache
 
@@ -25,10 +25,10 @@ services:
 
     develop:
       watch:
-        - path: ./config.yml
+        - path: ./graphhopper/config.yml
           action: sync+restart
           target: /config.yml
-        - path: ./custom_models
+        - path: ./graphhopper/custom_models
           action: sync+restart
           target: /data/custom_models
 
@@ -41,7 +41,7 @@ services:
       - "8991:8080"
 
     volumes:
-      - ./osm/pdl-latest.osm.pbf:/osm/map.osm.pbf:ro
+      - ./graphhopper/osm/pays-de-la-loire-latest.osm.pbf:/osm/map.osm.pbf:ro
       - nominatim_data:/var/lib/postgresql/16/main
 
     environment:
