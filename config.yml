@@ -1,0 +1,43 @@
+graphhopper:
+
+  datareader.file: /data/osm/france-latest.osm.pbf
+  custom_models.directory: /data/custom_models
+  graph.location: /data/graphhopper
+
+  import.osm.ignored_highways: steps
+
+  ch.disable: true
+
+  profiles:
+    - name: foot
+      custom_model_files: [foot.json]
+
+    - name: disabled
+      custom_model_files: [foot.json, disabled.json]
+
+  graph.encoded_values: foot_access,foot_priority,foot_average_speed,roundabout,smoothness,surface,average_slope,max_slope,footway,crossing,road_class,road_environment,hike_rating,country,foot_road_access,mtb_rating
+
+  # Precomputing (may be removed for the dynamic routing)
+  profiles_ch:
+    - profile: foot
+
+  profiles_lm:
+    - profile: disabled
+
+  graph.dataaccess.default_type: RAM_STORE
+
+  # Elevation data via NASA SRTM
+  graph.elevation.provider: srtm
+  graph.elevation.cache_dir: /data/srtm_cache
+  graph.elevation.edge_smoothing: moving_average
+  graph.elevation.edge_smoothing.moving_average.window_size: 150
+
+server:
+  application_connectors:
+    - type: http
+      port: 8989
+      bind_host: 0.0.0.0
+  admin_connectors:
+    - type: http
+      port: 8990
+      bind_host: 0.0.0.0

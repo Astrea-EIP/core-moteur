@@ -1,0 +1,31 @@
+services:
+  graphhopper:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        GH_VERSION: "11.0"
+    container_name: graphhopper
+    environment:
+      - JAVA_OPTS=-Xmx8g -Xms2g
+    volumes:
+      - ./osm:/data/osm:ro
+      - ./config.yml:/config.yml:ro
+      - ./custom_models:/data/custom_models:ro
+      - gh_data:/data/graphhopper
+      - srtm_cache:/data/srtm_cache
+    command: ["/config.yml"]
+    ports:
+      - "8989:8989"
+    develop:
+      watch:
+        - path: ./config.yml
+          action: sync+restart
+          target: /config.yml
+        - path: ./custom_models
+          action: sync+restart
+          target: /data/custom_models
+
+volumes:
+  gh_data:
+  srtm_cache:
