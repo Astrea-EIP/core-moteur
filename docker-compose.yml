@@ -5,18 +5,24 @@ services:
       dockerfile: Dockerfile
       args:
         GH_VERSION: "11.0"
+
     container_name: graphhopper
+
     environment:
-      - JAVA_OPTS=-Xmx8g -Xms2g
+      - JAVA_OPTS=-Xmx8g -Xms2g # Max memory : 8GB, initial memory: 2GB
+
     volumes:
       - ./osm/pdl-latest.osm.pbf:/data/map.osm.pbf:ro
       - ./config.yml:/config.yml:ro
       - ./custom_models:/data/custom_models:ro
       - gh_data:/data/graphhopper
       - srtm_cache:/data/srtm_cache
+
     command: ["/config.yml"]
+
     ports:
       - "8989:8989"
+
     develop:
       watch:
         - path: ./config.yml
@@ -28,12 +34,16 @@ services:
 
   nominatim:
     image: mediagis/nominatim:5.2
+
     container_name: nominatim
+
     ports:
       - "8991:8080"
+
     volumes:
       - ./osm/pdl-latest.osm.pbf:/osm/map.osm.pbf:ro
       - nominatim_data:/var/lib/postgresql/16/main
+
     environment:
       - PBF_PATH=/osm/map.osm.pbf
       - THREADS=8
