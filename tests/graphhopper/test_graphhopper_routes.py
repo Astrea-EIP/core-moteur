@@ -7,11 +7,6 @@ def base_url():
 
 
 def test_route_basic():
-    """Query a simple route between two nearby points.
-
-    Requires a GraphHopper server running with a loaded map on port 8989
-    (the default configuration used in the docker-compose file).
-    """
     url = f"{base_url()}/route"
     points = ["47.2184,-1.5536", "47.2200,-1.5500"]
     qs = "&".join(f"point={p}" for p in points)
@@ -32,7 +27,6 @@ def test_route_basic():
     assert path["time"] > 0
 
 def test_route_invalid_point():
-    """Ensure GraphHopper returns a 400 when missing points."""
     url = f"{base_url()}/route"
 
     resp = requests.get(url, params={"vehicle": "car"}, timeout=5)
@@ -46,7 +40,6 @@ def nominatim_base_url():
 
 
 def test_nominatim_search():
-    """Simple forward geocoding request."""
     url = f"{nominatim_base_url()}/search"
 
     params = {"q": "Nantes", "format": "json", "limit": 1}
@@ -63,7 +56,6 @@ def test_nominatim_search():
 
 
 def test_nominatim_reverse():
-    """Reverse geocoding around a known point (Pays‑de‑la‑Loire)."""
     url = f"{nominatim_base_url()}/reverse"
 
     params = {"lat": 47.2184, "lon": -1.5536, "format": "json"}
@@ -76,7 +68,6 @@ def test_nominatim_reverse():
 
 
 def test_nominatim_search_invalid():
-    """Searching without a query should return an error status."""
     url = f"{nominatim_base_url()}/search"
     resp = requests.get(url, timeout=5)
     assert resp.status_code >= 400, "expected HTTP error for missing query"

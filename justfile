@@ -53,3 +53,12 @@ download-osm-pdl:
 # Download OSM PBF file for Nord-Pas-de-Calais
 download-osm-npc:
     just download-osm "europe" "france" "nord-pas-de-calais"
+
+# Configure and build the shared library (lib/astrea_engine)
+build-lib:
+    cmake -S lib -B lib/build -DCMAKE_BUILD_TYPE=Release
+    cmake --build lib/build
+
+# Remove the shared library build artefacts (cmake intermediates only, not build/)
+clean-lib:
+    rm -rf lib/build
