@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <AssemblyName>AstreaEngine</AssemblyName>
+    <RootNamespace>AstreaEngine</RootNamespace>
+    <Version>0.1.0</Version>
+    <Authors>Astrea Team</Authors>
+    <Description>Astrea routing engine - C# implementation</Description>
+  </PropertyGroup>
+
+</Project>

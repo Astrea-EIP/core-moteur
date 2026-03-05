@@ -50,15 +50,27 @@ download-osm-france:
 download-osm-pdl:
     just download-osm "europe" "france" "pays-de-la-loire"
 
+# Build the C# library (debug)
+build-lib:
+    cd lib && dotnet build
+
+# Build the C# library (release)
+build-lib-release:
+    cd lib && dotnet build -c Release
+
+# Clean C# build artifacts
+clean-lib:
+    cd lib && dotnet clean && rm -rf bin obj
+
+# Build and run C# tests (tests reference the compiled DLL)
+test-lib:
+    cd lib && dotnet build
+    cd tests && dotnet test
+
+# Clean test artifacts
+clean-test:
+    cd tests && dotnet clean && rm -rf bin obj
+
 # Download OSM PBF file for Nord-Pas-de-Calais
 download-osm-npc:
     just download-osm "europe" "france" "nord-pas-de-calais"
-
-# Configure and build the shared library (lib/astrea_engine)
-build-lib:
-    cmake -S lib -B lib/build -DCMAKE_BUILD_TYPE=Release
-    cmake --build lib/build
-
-# Remove the shared library build artefacts (cmake intermediates only, not build/)
-clean-lib:
-    rm -rf lib/build
