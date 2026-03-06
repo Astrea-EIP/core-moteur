@@ -1,0 +1,63 @@
+{
+	"distance_influence": 80,
+	"priority": [
+		{
+			"if": "footway == SIDEWALK",
+			"multiply_by": "1.4"
+		},
+		{
+			"if": "footway == CROSSING",
+			"multiply_by": "1.2"
+		},
+		{
+			"if": "crossing == TRAFFIC_SIGNALS",
+			"multiply_by": "1.5"
+		},
+		{
+			"if": "crossing == UNMARKED || crossing == UNCONTROLLED",
+			"multiply_by": "0.4"
+		},
+		{
+			"if": "road_class == PRIMARY || road_class == SECONDARY || road_class == TERTIARY",
+			"multiply_by": "0.5"
+		},
+		{
+			"if": "road_class == TRUNK || road_class == MOTORWAY",
+			"multiply_by": "0.1"
+		},
+		{
+			"if": "road_environment == TUNNEL || road_environment == BRIDGE",
+			"multiply_by": "0.5"
+		},
+		{
+			"if": "surface == PAVED || surface == ASPHALT || surface == CONCRETE",
+			"multiply_by": "1.3"
+		},
+		{
+			"if": "surface == GRAVEL || surface == UNPAVED || surface == SAND",
+			"multiply_by": "0.4"
+		},
+		{
+			"if": "road_class == STEPS",
+			"multiply_by": "0.7"
+		}
+	],
+	"speed": [
+		{
+			"if": "true",
+			"limit_to": "3.5"
+		},
+		{
+			"if": "road_class == STEPS",
+			"multiply_by": "0.5"
+		},
+		{
+			"if": "surface == GRAVEL || surface == UNPAVED",
+			"multiply_by": "0.7"
+		},
+		{
+			"if": "crossing == UNMARKED",
+			"multiply_by": "0.6"
+		}
+	]
+}

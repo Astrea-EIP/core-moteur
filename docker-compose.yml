@@ -3,8 +3,6 @@ services:
     build:
       context: graphhopper
       dockerfile: Dockerfile
-      args:
-        GH_VERSION: "11.0"
 
     container_name: graphhopper
 
