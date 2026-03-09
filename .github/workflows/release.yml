@@ -39,6 +39,6 @@ jobs:
           draft: false
           prerelease: false
           files: |
-            lib/bin/Release/net10.0/AstreaEngine.dll
+            lib/bin/Release/net8.0/AstreaEngine.dll
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
