@@ -3,11 +3,31 @@
 // </copyright>
 
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 
 namespace AstreaEngine
 {
+    /// <summary>
+    /// Represents a geographic point with latitude and longitude.
+    /// </summary>
+    public class PointResponse
+    {
+        /// <summary>
+        /// Gets or sets the latitude.
+        /// </summary>
+        [JsonPropertyName("lat")]
+        public double Lat { get; set; }
+
+        /// <summary>
+        /// Gets or sets the longitude.
+        /// </summary>
+        [JsonPropertyName("lng")]
+        public double Lng { get; set; }
+    }
+
     /// <summary>
     /// Main Astrea Engine wrapper - C# implementation.
     /// Mirrors the API from the original C++ library.
@@ -16,27 +36,22 @@ namespace AstreaEngine
     {
         /// <summary>
         /// Route request.
-        /// Points: pipe-separated "lat,lon" pairs, e.g. "47.21,-1.55|47.22,-1.54"
+        /// Points: List of PointResponse objects with lat and lng coordinates.
         /// UserJson: JSON object describing the person, e.g. {"profile":"disabled","locale":"fr"}
-        /// Returns a JSON string.
+        /// Returns a list of PointResponse objects.
         /// </summary>
         /// <param name="host">The host to call the route endpoint on.</param>
-        /// <param name="pointsCsv">Pipe-separated "lat,lon" pairs.</param>
+        /// <param name="points">List of geographic points with latitude and longitude.</param>
         /// <param name="userJson">JSON string describing the user.</param>
         /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
-        public static async Task<string> AstreaRouteAsync(string host, string pointsCsv, string userJson)
+        public static async Task<List<PointResponse>> AstreaRouteAsync(string host, List<PointResponse> points, string userJson)
         {
-            // Parse CSV points
-            var points = new List<string>();
-            if (!string.IsNullOrEmpty(pointsCsv))
-            {
-                points = pointsCsv.Split('|')
-                    .Select(p => p.Trim())
-                    .Where(p => !string.IsNullOrEmpty(p))
-                    .ToList();
-            }
+            // Convert PointResponse objects to string format expected by Routes.RouteAsync
+            var pointStrings = points?.
+                Select(p => $"{p.Lat.ToString(CultureInfo.InvariantCulture)},{p.Lng.ToString(CultureInfo.InvariantCulture)}")
+                .ToList() ?? new List<string>();
 
-            return await Routes.RouteAsync(host, points, userJson);
+            return await Routes.RouteAsync(host, pointStrings, userJson);
         }
 
         /// <summary>
@@ -55,12 +70,12 @@ namespace AstreaEngine
         /// Synchronous version of AstreaRouteAsync.
         /// </summary>
         /// <param name="host">The host to call the route endpoint on.</param>
-        /// <param name="pointsCsv">Pipe-separated "lat,lon" pairs.</param>
+        /// <param name="points">List of geographic points with latitude and longitude.</param>
         /// <param name="userJson">JSON string describing the user.</param>
-        /// <returns>A JSON string representing the route.</returns>
-        public static string AstreaRoute(string host, string pointsCsv, string userJson)
+        /// <returns>A list of PointResponse objects representing the route.</returns>
+        public static List<PointResponse> AstreaRoute(string host, List<PointResponse> points, string userJson)
         {
-            return AstreaRouteAsync(host, pointsCsv, userJson).GetAwaiter().GetResult();
+            return AstreaRouteAsync(host, points, userJson).GetAwaiter().GetResult();
         }
 
         /// <summary>

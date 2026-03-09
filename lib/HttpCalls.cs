@@ -1,4 +1,4 @@
-// <copyright file="HttpCalls.cs" company="Astrea">
+﻿// <copyright file="HttpCalls.cs" company="Astrea">
 // Copyright (c) Astrea. All rights reserved.
 // </copyright>
 
