@@ -1,10 +1,12 @@
+# --- Docker ---
+
 # Start the containers, if "version" is set to "dev", then the docker-compose.dev.yml will be used
 run version="prod": check
     #!/usr/bin/env bash
     if [ "{{version}}" = "dev" ]; then
-        docker-compose -f docker-compose.dev.yml up -d
+        docker-compose -f docker-compose.dev.yml up
     else
-        docker-compose up -d
+        docker-compose up
     fi
 
 # Check if docker and docker-compose are installed
@@ -25,30 +27,7 @@ build: check
     docker-compose build --no-cache
     just run
 
-logs: check
-    docker-compose logs -f
-
-# Download the latest OSM PBF files and place them in the "osm" directory
-download-osm continent="europe" country="france" zone="":
-    #!/usr/bin/env bash
-    if [ -z "{{continent}}" ] || [ -z "{{country}}" ]; then
-        echo "Error: continent and country variables must be set"
-        exit 1
-    fi
-    mkdir -p osm
-    if [ -z "{{zone}}" ]; then
-        curl -L -o osm/{{country}}-latest.osm.pbf "https://download.geofabrik.de/{{continent}}/{{country}}-latest.osm.pbf"
-    else
-        curl -L -o osm/{{zone}}-latest.osm.pbf "https://download.geofabrik.de/{{continent}}/{{country}}/{{zone}}-latest.osm.pbf"
-    fi
-
-# Download OSM PBF file for France
-download-osm-france:
-    just download-osm "europe" "france"
-
-# Download OSM PBF file for Pays de la Loire
-download-osm-pdl:
-    just download-osm "europe" "france" "pays-de-la-loire"
+# --- C# library ---
 
 # Build the C# library (debug)
 build-lib:
@@ -70,7 +49,3 @@ test-lib:
 # Clean test artifacts
 clean-test:
     cd tests && dotnet clean && rm -rf bin obj
-
-# Download OSM PBF file for Nord-Pas-de-Calais
-download-osm-npc:
-    just download-osm "europe" "france" "nord-pas-de-calais"

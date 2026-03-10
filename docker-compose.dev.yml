@@ -37,10 +37,19 @@ services:
           echo 'Map found at /osm/map.osm.pbf; skipping download';
         else
           echo 'Downloading map.osm.pbf into /osm/map.osm.pbf' &&
-          curl -fSL https://download.geofabrik.de/europe/france-latest.osm.pbf -o /osm/map.osm.pbf;
+          curl -fSL https://download.geofabrik.de/europe/france/pays-de-la-loire-latest.osm.pbf -o /osm/map.osm.pbf;
         fi
       "
     restart: "no"
+
+    develop:
+      watch:
+        - path: ./graphhopper/config.yml
+          action: sync+restart
+          target: /config.yml
+        - path: ./graphhopper/custom_models
+          action: sync+restart
+          target: /data/custom_models
 
   nominatim:
     depends_on:
