@@ -1,0 +1,67 @@
+services:
+  graphhopper:
+    depends_on:
+      map-downloader:
+        condition: service_completed_successfully
+
+    build:
+      context: graphhopper
+      dockerfile: Dockerfile
+
+    container_name: graphhopper
+
+    environment:
+      - JAVA_OPTS=-Xmx8g -Xms2g # Max memory : 8GB, initial memory: 2GB
+
+    volumes:
+      - ./graphhopper/osm/map.osm.pbf:/data/map.osm.pbf:ro
+      - ./graphhopper/config.yml:/config.yml:ro
+      - ./graphhopper/custom_models:/data/custom_models:ro
+      - gh_data:/data/graphhopper
+      - srtm_cache:/data/srtm_cache
+
+    command: ["/config.yml"]
+
+    ports:
+      - "8989:8989"
+
+  map-downloader:
+    image: curlimages/curl:latest
+    container_name: map-downloader
+    volumes:
+      - ./graphhopper/osm:/osm
+      - gh_data:/data/graphhopper
+    command: >
+      sh -c "
+        if [ -f /osm/map.osm.pbf ]; then
+          echo 'Map found at /osm/map.osm.pbf; skipping download';
+        else
+          echo 'Downloading map.osm.pbf into /osm/map.osm.pbf' &&
+          curl -fSL https://download.geofabrik.de/europe/france-latest.osm.pbf -o /osm/map.osm.pbf;
+        fi
+      "
+    restart: "no"
+
+  nominatim:
+    depends_on:
+      map-downloader:
+        condition: service_completed_successfully
+    image: mediagis/nominatim:5.2
+
+    container_name: nominatim
+
+    ports:
+      - "8991:8080"
+
+    volumes:
+      - ./graphhopper/osm/map.osm.pbf:/osm/map.osm.pbf:ro
+      - nominatim_data:/var/lib/postgresql/16/main
+
+    environment:
+      - PBF_PATH=/osm/map.osm.pbf
+      - THREADS=8
+
+volumes:
+  gh_data:
+  srtm_cache:
+  nominatim_data:

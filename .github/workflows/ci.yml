@@ -1,0 +1,33 @@
+name: CI - core-moteur
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v6
+
+      - name: ⚙️ Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: 🏗️ Build engine
+        run: |
+          cd lib
+          dotnet build -c Release
+
+      - name: 🧪 Run tests
+        run: |
+          cd tests
+          dotnet test --configuration Release
+
+      - name: 🐳 Build GraphHopper image
+        run: docker build -t proto-engine ./graphhopper
