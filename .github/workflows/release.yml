@@ -2,8 +2,8 @@ name: Build and Release
 
 on:
   push:
-    branches:
-      - main
+    tags:
+      - "v*"
 
 permissions:
   contents: write
@@ -13,31 +13,21 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+      - uses: actions/setup-dotnet@v5
         with:
-          dotnet-version: '10.0.x'
+          dotnet-version: '8.0.x'
 
-      - name: Restore dependencies
-        run: dotnet restore lib/AstreaEngine.csproj
+      - run: dotnet restore lib/AstreaEngine.csproj
 
-      - name: Build Release
-        run: dotnet build lib/AstreaEngine.csproj --configuration Release --no-restore
-
-      - name: Get version
-        id: version
-        run: echo "VERSION=$(date +'%Y.%m.%d')-$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+      - run: dotnet build lib/AstreaEngine.csproj --configuration Release --no-restore
 
       - name: Create Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
-          tag_name: v${{ steps.version.outputs.VERSION }}
-          name: Release v${{ steps.version.outputs.VERSION }}
-          draft: false
-          prerelease: false
+          tag_name: ${{ github.ref_name }}
+          name: Release ${{ github.ref_name }}
           files: |
             lib/bin/Release/net8.0/AstreaEngine.dll
         env:
