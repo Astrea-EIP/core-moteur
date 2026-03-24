@@ -1,0 +1,91 @@
+{
+	"distance_influence": 70,
+	"priority": [
+		{
+			"if": "smoothness == IMPASSABLE",
+			"multiply_by": "0"
+		},
+		{
+			"if": "average_slope > 10",
+			"multiply_by": "0.2"
+		},
+		{
+			"if": "average_slope > 6",
+			"multiply_by": "0.5"
+		},
+		{
+			"if": "road_class == STEPS",
+			"multiply_by": "0.4"
+		},
+		{
+			"if": "footway == SIDEWALK",
+			"multiply_by": "1.3"
+		},
+		{
+			"if": "footway == CROSSING",
+			"multiply_by": "1.1"
+		},
+		{
+			"if": "crossing == TRAFFIC_SIGNALS || crossing == MARKED",
+			"multiply_by": "1.2"
+		},
+		{
+			"if": "surface == PAVED || surface == ASPHALT || surface == CONCRETE",
+			"multiply_by": "1.5"
+		},
+		{
+			"if": "surface == COBBLESTONE",
+			"multiply_by": "0.4"
+		},
+		{
+			"if": "surface == GRAVEL || surface == UNPAVED || surface == DIRT",
+			"multiply_by": "0.4"
+		},
+		{
+			"if": "surface == SAND || surface == OTHER",
+			"multiply_by": "0.1"
+		},
+		{
+			"if": "smoothness == EXCELLENT || smoothness == GOOD",
+			"multiply_by": "1.3"
+		},
+		{
+			"if": "smoothness == BAD",
+			"multiply_by": "0.5"
+		},
+		{
+			"if": "smoothness == VERY_BAD || smoothness == HORRIBLE || smoothness == VERY_HORRIBLE",
+			"multiply_by": "0.1"
+		}
+	],
+	"speed": [
+		{
+			"if": "true",
+			"limit_to": "3.0"
+		},
+		{
+			"if": "road_class == STEPS",
+			"multiply_by": "0.3"
+		},
+		{
+			"if": "average_slope > 6",
+			"multiply_by": "0.6"
+		},
+		{
+			"if": "average_slope > 10",
+			"multiply_by": "0.3"
+		},
+		{
+			"if": "surface == COBBLESTONE || surface == PAVING_STONES",
+			"multiply_by": "0.6"
+		},
+		{
+			"if": "surface == GRAVEL || surface == UNPAVED",
+			"multiply_by": "0.5"
+		},
+		{
+			"if": "smoothness == BAD || smoothness == VERY_BAD || smoothness == HORRIBLE",
+			"multiply_by": "0.5"
+		}
+	]
+}
