@@ -16,9 +16,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Reference Include="AstreaEngine">
-      <HintPath>../lib/bin/Debug/net8.0/AstreaEngine.dll</HintPath>
-    </Reference>
+    <ProjectReference Include="../lib/AstreaEngine.csproj" />
   </ItemGroup>
 
 </Project>
