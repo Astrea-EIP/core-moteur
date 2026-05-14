@@ -6,28 +6,31 @@ on:
   push:
     branches: [main]
 
+concurrency:
+  group: ci-core-moteur-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   ci:
     runs-on: ubuntu-latest
 
     steps:
-      - name: 📥 Checkout repository
+      - name: Checkout repository
         uses: actions/checkout@v6
 
-      - name: ⚙️ Setup .NET
+      - name: Setup .NET
         uses: actions/setup-dotnet@v5
         with:
-          dotnet-version: '8.0.x'
+          dotnet-version: 8.0.x
 
-      - name: 🏗️ Build engine
-        run: |
-          cd lib
-          dotnet build -c Release
+      - name: Restore engine dependencies
+        run: dotnet restore lib/AstreaEngine.csproj
 
-      - name: 🧪 Run tests
-        run: |
-          cd tests
-          dotnet test --configuration Release
+      - name: Build engine
+        run: dotnet build lib/AstreaEngine.csproj -c Release --no-restore
 
-      - name: 🐳 Build GraphHopper image
+      - name: Run tests
+        run: dotnet test tests --configuration Release
+
+      - name: Build GraphHopper image
         run: docker build -t proto-engine ./graphhopper
