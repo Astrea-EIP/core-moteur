@@ -7,7 +7,7 @@ RUN apt-get update && \
 
 WORKDIR /app
 
-RUN git clone --depth 1 https://github.com/graphhopper/graphhopper.git .
+RUN git clone --depth 1 --branch 10.2 https://github.com/graphhopper/graphhopper.git .
 
 RUN mvn clean package -DskipTests -Pskip-format
 
