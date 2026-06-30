@@ -1,6 +1,36 @@
 # core-moteur
 
-The prototype engine for the Astrea project. It uses the GraphHopper routing engine to calculate routes and distances between locations.
+`core-moteur` is the Astrea-EIP engine repository.
+It owns core business computation and domain logic consumed by other services.
 
-Instead of needing to remember all of the commands needed to run the project, you can use [just](https://github.com/casey/just) to run the project. All the commands are in the `justfile` and you can run them with `just <command>`.
-If you don't know the commands, you can run `just --list` to see all the available commands.
+## What belongs here
+
+This repository owns:
+
+- engine and calculation logic
+- domain rules and route or scoring behavior
+- engine-specific tests and artifacts
+- repository-local engine documentation
+
+This repository does not own:
+
+- frontend or mobile UI concerns
+- deployment environment state
+- central contribution standards
+
+## Local development
+
+The repository includes a `justfile` for common commands.
+Use `just --list` to inspect the available shortcuts.
+
+Typical validation commands:
+
+```bash
+dotnet build lib -c Release
+dotnet test tests --configuration Release
+```
+
+## Documentation
+
+Repository-specific documentation lives under `docs/`.
+The shared handbook lives in `Astrea-EIP/docs`.

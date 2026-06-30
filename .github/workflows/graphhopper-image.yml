@@ -1,0 +1,23 @@
+name: Build GraphHopper image
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'graphhopper/**'
+
+concurrency:
+  group: graphhopper-image-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Build GraphHopper image
+        run: docker build -t proto-engine ./graphhopper
