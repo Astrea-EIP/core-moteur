@@ -24,7 +24,7 @@ graphhopper:
     - name: wheelchair
       custom_model_files: [foot.json, wheelchair.json]
 
-  graph.encoded_values: foot_access,foot_priority,foot_average_speed,roundabout,smoothness,surface,average_slope,max_slope,footway,crossing,road_class,road_environment,hike_rating,country,foot_road_access,mtb_rating,max_width,ferry_speed,lit
+  graph.encoded_values: foot_access,foot_priority,foot_average_speed,roundabout,smoothness,surface,average_slope,max_slope,footway,crossing,road_class,road_environment,hike_rating,country,road_access,mtb_rating,max_width,ferry_speed
 
   # Precomputing (may be removed for the dynamic routing)
   profiles_ch:
