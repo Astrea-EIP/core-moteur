@@ -1,0 +1,45 @@
+name: Project Automation
+on:
+  issues:
+    types: [opened, assigned]
+  pull_request:
+    types: [review_requested]
+
+jobs:
+  manage_project:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.PROJECT_TOKEN }}
+      ORGANIZATION: Astrea-EIP
+      PROJECT_NUMBER: 1
+    steps:
+      - name: Gérer l'ajout et l'assignation de l'issue
+        if: github.event_name == 'issues'
+        run: |
+          ISSUE_URL="${{ github.event.issue.html_url }}"
+          
+          # Ajoute l'issue au projet et récupère son ID
+          ITEM_ID=$(gh project item-add $PROJECT_NUMBER --owner $ORGANIZATION --url $ISSUE_URL --format json --jq '.id')
+          
+          # Force le bon statut selon l'action déclenchée
+          if [ "${{ github.event.action }}" == "assigned" ]; then
+            gh project item-edit --id $ITEM_ID --project-id $PROJECT_NUMBER --field-id "Status" --text "In Progress"
+          elif [ "${{ github.event.action }}" == "opened" ]; then
+            gh project item-edit --id $ITEM_ID --project-id $PROJECT_NUMBER --field-id "Status" --text "Todo"
+          fi
+
+      - name: Gérer la demande de review de la PR
+        if: github.event_name == 'pull_request'
+        run: |
+          PR_URL="${{ github.event.pull_request.html_url }}"
+          
+          # Cherche l'URL de l'issue liée à la PR via le mot-clé (ex: Closes #12)
+          ISSUE_URL=$(gh pr view $PR_URL --json closingIssuesReferences --jq '.closingIssuesReferences[0].url')
+          
+          # Si une issue est liée, on la déplace en In Review
+          if [ "$ISSUE_URL" != "null" ] && [ -n "$ISSUE_URL" ]; then
+            ITEM_ID=$(gh project item-add $PROJECT_NUMBER --owner $ORGANIZATION --url $ISSUE_URL --format json --jq '.id')
+            gh project item-edit --id $ITEM_ID --project-id $PROJECT_NUMBER --field-id "Status" --text "In Review"
+          else
+            echo "Aucune issue n'est liée à cette PR."
+          fi
