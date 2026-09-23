@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Globalization;
@@ -12,6 +12,15 @@ namespace AstreaEngineTests
 {
     public class AstreaEngineUnitTests
     {
+        public String GraphhopperUrl = "http://localhost:8989";
+
+        [Fact]
+        public void TestDockerUp()
+        {
+            var HealthCheck = AstreaEngine.AstreaEngine.AstreaHealth(GraphhopperUrl);
+            Assert.Equal("{\"status\":\"OK\"}", HealthCheck);
+        }
+
         [Fact]
         public void TestAstreaRouteWithInvalidPoints()
         {
@@ -23,7 +32,7 @@ namespace AstreaEngineTests
             var exception = Assert.Throws<ValidationException>(() =>
             {
                 AstreaEngine.AstreaEngine.AstreaRoute(
-                    "http://localhost:8989",
+                    GraphhopperUrl,
                     points,
                     "{\"profile\":\"foot\"}"
                 );
@@ -40,7 +49,7 @@ namespace AstreaEngineTests
             var exception = await Assert.ThrowsAsync<ValidationException>(async () =>
             {
                 await AstreaEngine.AstreaEngine.AstreaRouteAsync(
-                    "http://localhost:8989",
+                    GraphhopperUrl,
                     points,
                     ""
                 );
@@ -61,7 +70,7 @@ namespace AstreaEngineTests
             try
             {
                 var result = await AstreaEngine.AstreaEngine.AstreaRouteAsync(
-                    "http://localhost:8989",
+                    GraphhopperUrl,
                     points,
                     "{\"profile\":\"wheelchair\"}"
                 );
@@ -87,7 +96,7 @@ namespace AstreaEngineTests
             var exception = await Assert.ThrowsAsync<ValidationException>(async () =>
             {
                 await AstreaEngine.AstreaEngine.AstreaRouteAsync(
-                    "http://localhost:8989",
+                    GraphhopperUrl,
                     points,
                     "invalid json"
                 );
