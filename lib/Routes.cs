@@ -16,29 +16,6 @@ namespace AstreaEngine
     /// </summary>
     public static class Routes
     {
-        private static void buildCustomModel(JsonObject jsonBody, JsonNode user)
-        {
-            // TODO: Implement custom model building based on user profile and preferences.
-            var speed = new JsonArray
-            {
-            };
-
-            var priority = new JsonArray
-            {
-            };
-
-            // TODO: create the factory that take those two arrays and populate with the right data
-
-            var customModel = new JsonObject
-            {
-                { "speed", speed },
-                { "priority", priority },
-                { "distance_influence", 100 } // temp value
-            };
-            // jsonBody["custom_model"] = customModel;
-            jsonBody["profile"] = "wheelchair"; // temp value
-        }
-
         private static List<PointResponse> parseJson(string json)
         {
             var result = new List<PointResponse>();
@@ -94,6 +71,7 @@ namespace AstreaEngine
                 throw new ValidationException("Invalid user JSON.");
             }
 
+            // Build the points array for the request
             var pointsArray = new JsonArray();
             foreach (var point in points)
             {
@@ -114,10 +92,13 @@ namespace AstreaEngine
             var jsonBody = new JsonObject
             {
                 { "points", pointsArray },
-                { "locale", "fr" },
+                { "locale", "fr" }, // ! Hardcoded value, should be in the user JSON
                 { "points_encoded", false },
             };
 
+            // Construction of the user profile and custom model based on the user JSON
+            // If user is null, use default profile (no accessibility features)
+            // If user is not null, build a custom model based on the user profile and preferences
             if (user == null)
             {
                 jsonBody["profile"] = "foot";
@@ -126,7 +107,7 @@ namespace AstreaEngine
             else
             {
                 jsonBody["ch.disable"] = "true";
-                buildCustomModel(jsonBody, user);
+                CustomUserModel.buildCustomModel(jsonBody, user);
             }
 
             var responseJson = await HttpCalls.DoGetAsync(host, $"/route", jsonBody.ToJsonString());
