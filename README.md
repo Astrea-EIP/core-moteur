@@ -30,6 +30,18 @@ dotnet build lib -c Release
 dotnet test tests --configuration Release
 ```
 
+### Routing GUI Playground
+
+To visually test the routing engine with custom `userJson` profiles and point coordinates on an interactive map:
+
+```bash
+just playground
+# Or directly:
+dotnet run --project playground
+```
+
+Then open `http://localhost:5050` in your browser.
+
 ## Documentation
 
 Repository-specific documentation lives under `docs/`.

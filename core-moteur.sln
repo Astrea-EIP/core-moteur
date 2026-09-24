@@ -7,8 +7,13 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{0AB3BF05-4346-4AA6-1389-037BE0695223}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AstreaEngine", "lib\AstreaEngine.csproj", "{C7765232-7C0B-8CBA-FCF3-48D11F8D620D}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AstreaEngine", "lib/AstreaEngine.csproj", "{C7765232-7C0B-8CBA-FCF3-48D11F8D620D}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AstreaEngineTests", "tests\AstreaEngineTests.csproj", "{F9EA9557-D267-CF30-A2E6-4D9564719E4D}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AstreaEngineTests", "tests/AstreaEngineTests.csproj", "{F9EA9557-D267-CF30-A2E6-4D9564719E4D}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AstreaEngine.Playground", "playground\AstreaEngine.Playground.csproj", "{1216E9C7-948A-4C88-AD9A-36E9FFAA7505}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AstreaEngine.Playground", "playground/AstreaEngine.Playground.csproj", "{1216E9C7-948A-4C88-AD9A-36E9FFAA7505}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -24,6 +29,10 @@ Global
 		{F9EA9557-D267-CF30-A2E6-4D9564719E4D}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{F9EA9557-D267-CF30-A2E6-4D9564719E4D}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{F9EA9557-D267-CF30-A2E6-4D9564719E4D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1216E9C7-948A-4C88-AD9A-36E9FFAA7505}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1216E9C7-948A-4C88-AD9A-36E9FFAA7505}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1216E9C7-948A-4C88-AD9A-36E9FFAA7505}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1216E9C7-948A-4C88-AD9A-36E9FFAA7505}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

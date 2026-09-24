@@ -1,4 +1,4 @@
-﻿// <copyright file="Routes.cs" company="Astrea">
+// <copyright file="Routes.cs" company="Astrea">
 // Copyright (c) Astrea. All rights reserved.
 // </copyright>
 
@@ -103,10 +103,12 @@ namespace AstreaEngine
             {
                 jsonBody["profile"] = "foot";
                 jsonBody["ch.disable"] = "false";
+                jsonBody["ch.disable"] = false;
             }
             else
             {
                 jsonBody["ch.disable"] = "true";
+                jsonBody["ch.disable"] = true;
                 CustomUserModel.buildCustomModel(jsonBody, user);
             }
 

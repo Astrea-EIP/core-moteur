@@ -1,0 +1,829 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AstreaEngine Routing Playground</title>
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    :root {
+      --bg: #0f172a;
+      --panel: #1e293b;
+      --panel-border: #334155;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --accent: #3b82f6;
+      --accent-hover: #2563eb;
+      --success: #10b981;
+      --danger: #ef4444;
+      --warning: #f59e0b;
+    }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      display: flex;
+      height: 100vh;
+      overflow: hidden;
+    }
+    #sidebar {
+      width: 440px;
+      min-width: 380px;
+      background: var(--panel);
+      border-right: 1px solid var(--panel-border);
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      z-index: 1000;
+      overflow-y: auto;
+    }
+    #sidebar-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--panel-border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    #sidebar-header h1 {
+      font-size: 1.15rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .badge {
+      font-size: 0.72rem;
+      padding: 3px 8px;
+      border-radius: 9999px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .badge-ok { background: rgba(16, 185, 129, 0.2); color: var(--success); }
+    .badge-error { background: rgba(239, 68, 68, 0.2); color: var(--danger); }
+    .badge-pending { background: rgba(245, 158, 11, 0.2); color: var(--warning); }
+
+    .section {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--panel-border);
+    }
+    .section-title {
+      font-size: 0.82rem;
+      text-transform: uppercase;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      margin-bottom: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .field-row {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    .field {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    label {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+    input, select, textarea {
+      width: 100%;
+      background: #0f172a;
+      border: 1px solid var(--panel-border);
+      color: var(--text);
+      padding: 8px 10px;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      font-family: inherit;
+    }
+    input:focus, select:focus, textarea:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 1px var(--accent);
+    }
+    textarea {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 0.8rem;
+      line-height: 1.4;
+      resize: vertical;
+      min-height: 110px;
+    }
+    .btn-group {
+      display: flex;
+      gap: 8px;
+    }
+    button {
+      cursor: pointer;
+      border-radius: 6px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      padding: 8px 12px;
+      border: 1px solid transparent;
+      transition: all 0.15s ease;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+    }
+    .btn-primary:hover:not(:disabled) {
+      background: var(--accent-hover);
+    }
+    .btn-secondary {
+      background: #334155;
+      color: var(--text);
+    }
+    .btn-secondary:hover:not(:disabled) {
+      background: #475569;
+    }
+    .btn-outline {
+      background: transparent;
+      border-color: var(--panel-border);
+      color: var(--text-muted);
+    }
+    .btn-outline:hover:not(:disabled) {
+      border-color: var(--accent);
+      color: var(--text);
+    }
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .preset-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 8px;
+    }
+    .chip {
+      font-size: 0.75rem;
+      padding: 4px 10px;
+      background: #0f172a;
+      border: 1px solid var(--panel-border);
+      border-radius: 6px;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: 0.15s;
+    }
+    .chip:hover, .chip.active {
+      border-color: var(--accent);
+      color: var(--text);
+      background: rgba(59, 130, 246, 0.2);
+    }
+
+    #map {
+      flex: 1;
+      height: 100vh;
+      width: 100%;
+      background: #0b1120;
+    }
+
+    .point-indicator {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.8rem;
+      margin-bottom: 6px;
+    }
+    .point-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .point-dot.start { background: var(--success); }
+    .point-dot.end { background: var(--danger); }
+
+    .help-hint {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      line-height: 1.3;
+      margin-top: 6px;
+    }
+
+    .alert {
+      padding: 10px 12px;
+      border-radius: 6px;
+      font-size: 0.8rem;
+      margin-top: 10px;
+      line-height: 1.4;
+      word-break: break-word;
+    }
+    .alert-error {
+      background: rgba(239, 68, 68, 0.15);
+      border: 1px solid var(--danger);
+      color: #fca5a5;
+    }
+    .alert-success {
+      background: rgba(16, 185, 129, 0.15);
+      border: 1px solid var(--success);
+      color: #6ee7b7;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-top: 10px;
+    }
+    .stat-card {
+      background: #0f172a;
+      padding: 8px 10px;
+      border-radius: 6px;
+      border: 1px solid var(--panel-border);
+    }
+    .stat-label { font-size: 0.7rem; color: var(--text-muted); }
+    .stat-value { font-size: 1.05rem; font-weight: 700; color: var(--text); }
+
+    details summary {
+      cursor: pointer;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-top: 10px;
+      user-select: none;
+    }
+    details pre {
+      background: #090d16;
+      padding: 10px;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      overflow-x: auto;
+      margin-top: 6px;
+      max-height: 160px;
+    }
+  </style>
+</head>
+<body>
+
+  <aside id="sidebar">
+    <div id="sidebar-header">
+      <h1>AstreaEngine Playground</h1>
+      <span id="health-badge" class="badge badge-pending">Checking...</span>
+    </div>
+
+    <!-- Backend Host & Quick Jump -->
+    <div class="section">
+      <div class="section-title">Backend Connection</div>
+      <div class="field-row">
+        <div class="field">
+          <input type="text" id="host-input" value="http://localhost:8989" placeholder="http://localhost:8989" />
+        </div>
+        <button id="btn-health" class="btn-secondary" title="Check connection to GraphHopper">Check</button>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Location Quick Jump</label>
+          <div class="preset-chips">
+            <span id="chip-nantes" class="chip active" onclick="jumpLocation('nantes')">Nantes</span>
+            <span id="chip-lille" class="chip" onclick="jumpLocation('lille')">Lille</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Waypoints Section -->
+    <div class="section">
+      <div class="section-title">
+        <span>Route Waypoints</span>
+        <button id="btn-clear-points" class="btn-outline" style="padding: 2px 8px; font-size: 0.7rem;">Reset</button>
+      </div>
+
+      <div class="point-indicator">
+        <span class="point-dot start"></span>
+        <span style="font-weight: 600;">Start (A):</span>
+        <span id="label-start" style="color: var(--text-muted);">Not set</span>
+      </div>
+      <div class="point-indicator">
+        <span class="point-dot end"></span>
+        <span style="font-weight: 600;">Destination (B):</span>
+        <span id="label-end" style="color: var(--text-muted);">Not set</span>
+      </div>
+
+      <div class="btn-group" style="margin-top: 8px;">
+        <button id="btn-reverse" class="btn-secondary" style="flex: 1;">⇄ Reverse A/B</button>
+        <button id="btn-preset-nantes" class="btn-secondary" style="flex: 1;">Nantes Points</button>
+        <button id="btn-preset-lille" class="btn-secondary" style="flex: 1;">Lille Points</button>
+      </div>
+      <p class="help-hint">Tip: Click on the map to place Start & Destination markers, or drag them around.</p>
+    </div>
+
+    <!-- userJson Editor -->
+    <div class="section">
+      <div class="section-title">
+        <span>User Profile (userJson)</span>
+        <button id="btn-format-json" class="btn-outline" style="padding: 2px 8px; font-size: 0.7rem;">Format</button>
+      </div>
+
+      <div class="preset-chips">
+        <span class="chip active" onclick="applyProfile('wheelchair')">Wheelchair</span>
+        <span class="chip" onclick="applyProfile('blind')">Blind</span>
+        <span class="chip" onclick="applyProfile('crutches')">Crutches</span>
+        <span class="chip" onclick="applyProfile('walking')">Walking</span>
+        <span class="chip" onclick="applyProfile('foot')">Foot</span>
+      </div>
+
+      <textarea id="user-json-input" spellcheck="false">{
+  "profile": "wheelchair"
+}</textarea>
+
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 10px;">
+        <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 0.75rem; color: var(--text-muted); user-select: none;">
+          <input type="checkbox" id="chk-auto-calculate" checked style="width: auto; cursor: pointer;" />
+          Auto-calculate on change
+        </label>
+        <span id="calc-indicator" style="font-size: 0.72rem; color: var(--text-muted);"></span>
+      </div>
+
+      <button id="btn-calculate" class="btn-primary" style="width: 100%; margin-top: 8px; padding: 10px;">
+        ▶ Recalculate Route
+      </button>
+    </div>
+
+    <!-- Results Section -->
+    <div class="section" style="flex: 1;">
+      <div class="section-title">Result</div>
+      <div id="result-container">
+        <p class="help-hint">Place waypoints and click "Calculate Route" to run the algorithm.</p>
+      </div>
+    </div>
+  </aside>
+
+  <main id="map"></main>
+
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    // State
+    let map = null;
+    let startMarker = null;
+    let endMarker = null;
+    let routeLayer = null;
+
+    const PRESETS = {
+      nantes: {
+        center: [47.2184, -1.5536],
+        zoom: 14,
+        start: [47.2100, -1.5500],
+        end: [47.2200, -1.5400]
+      },
+      lille: {
+        center: [50.6292, 3.0573],
+        zoom: 14,
+        start: [50.6300, 3.0550],
+        end: [50.6380, 3.0700]
+      }
+    };
+
+    const PROFILES = {
+      wheelchair: { profile: "wheelchair" },
+      blind: { profile: "blind" },
+      crutches: { profile: "crutches" },
+      walking: { profile: "walking" },
+      foot: { profile: "foot" }
+    };
+
+    const PROFILE_COLORS = {
+      wheelchair: '#3b82f6', // blue
+      blind: '#a855f7',      // purple
+      crutches: '#ec4899',   // pink
+      walking: '#10b981',    // emerald
+      foot: '#f59e0b'        // amber
+    };
+
+    let lastRouteStats = null;
+
+    function triggerAutoCalculate() {
+      const auto = document.getElementById('chk-auto-calculate')?.checked ?? true;
+      if (auto && startMarker && endMarker) {
+        calculateRoute();
+      }
+    }
+
+    // Initialize Map
+    function initMap() {
+      try {
+        map = L.map('map', {
+          zoomControl: true
+        }).setView(PRESETS.nantes.center, PRESETS.nantes.zoom);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          maxZoom: 19,
+          attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(map);
+
+        map.on('click', onMapClick);
+
+        // Ensure map renders properly within flex layout
+        setTimeout(() => {
+          if (map) map.invalidateSize();
+        }, 100);
+      } catch (e) {
+        console.error("Map initialization failed: ", e);
+      }
+    }
+
+    function createMarkerIcon(color, text) {
+      return L.divIcon({
+        className: 'custom-pin',
+        html: `<div style="
+          background-color: ${color};
+          width: 24px;
+          height: 24px;
+          border-radius: 50%;
+          border: 2px solid white;
+          box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+          color: white;
+          font-weight: 700;
+          font-size: 11px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        ">${text}</div>`,
+        iconSize: [24, 24],
+        iconAnchor: [12, 12]
+      });
+    }
+
+    function onMapClick(e) {
+      const lat = parseFloat(e.latlng.lat.toFixed(6));
+      const lng = parseFloat(e.latlng.lng.toFixed(6));
+
+      if (!startMarker) {
+        setStart(lat, lng);
+      } else if (!endMarker) {
+        setEnd(lat, lng);
+        triggerAutoCalculate();
+      } else {
+        setStart(lat, lng);
+        clearEnd();
+        clearRoute();
+      }
+    }
+
+    function setStart(lat, lng) {
+      if (!map) return;
+      if (startMarker) map.removeLayer(startMarker);
+      startMarker = L.marker([lat, lng], {
+        draggable: true,
+        icon: createMarkerIcon('#10b981', 'A')
+      }).addTo(map);
+
+      startMarker.on('dragend', () => {
+        updateLabels();
+        triggerAutoCalculate();
+      });
+
+      updateLabels();
+    }
+
+    function setEnd(lat, lng) {
+      if (!map) return;
+      if (endMarker) map.removeLayer(endMarker);
+      endMarker = L.marker([lat, lng], {
+        draggable: true,
+        icon: createMarkerIcon('#ef4444', 'B')
+      }).addTo(map);
+
+      endMarker.on('dragend', () => {
+        updateLabels();
+        triggerAutoCalculate();
+      });
+
+      updateLabels();
+    }
+
+    function clearEnd() {
+      if (endMarker && map) {
+        map.removeLayer(endMarker);
+        endMarker = null;
+      }
+      updateLabels();
+    }
+
+    function clearRoute() {
+      if (routeLayer && map) {
+        map.removeLayer(routeLayer);
+        routeLayer = null;
+      }
+    }
+
+    function updateLabels() {
+      const startLbl = document.getElementById('label-start');
+      const endLbl = document.getElementById('label-end');
+
+      if (startMarker) {
+        const p = startMarker.getLatLng();
+        startLbl.textContent = `${p.lat.toFixed(5)}, ${p.lng.toFixed(5)}`;
+      } else {
+        startLbl.textContent = 'Not set';
+      }
+
+      if (endMarker) {
+        const p = endMarker.getLatLng();
+        endLbl.textContent = `${p.lat.toFixed(5)}, ${p.lng.toFixed(5)}`;
+      } else {
+        endLbl.textContent = 'Not set';
+      }
+    }
+
+    function jumpLocation(key) {
+      const p = PRESETS[key];
+      if (!p) return;
+      document.getElementById('chip-nantes')?.classList.toggle('active', key === 'nantes');
+      document.getElementById('chip-lille')?.classList.toggle('active', key === 'lille');
+      setPresetPoints(key);
+    }
+
+    function setPresetPoints(key) {
+      const p = PRESETS[key];
+      if (!p || !map) return;
+      setStart(p.start[0], p.start[1]);
+      setEnd(p.end[0], p.end[1]);
+      clearRoute();
+      map.flyToBounds([p.start, p.end], { padding: [50, 50] });
+      triggerAutoCalculate();
+    }
+
+    function applyProfile(profileName) {
+      document.querySelectorAll('.preset-chips .chip').forEach(c => {
+        if (c.textContent.trim().toLowerCase() === profileName.toLowerCase()) {
+          c.classList.add('active');
+        } else if (['wheelchair', 'blind', 'crutches', 'walking', 'foot'].includes(c.textContent.trim().toLowerCase())) {
+          c.classList.remove('active');
+        }
+      });
+
+      const profile = PROFILES[profileName] || { profile: profileName };
+      document.getElementById('user-json-input').value = JSON.stringify(profile, null, 2);
+      triggerAutoCalculate();
+    }
+
+    // Health check
+    async function checkHealth() {
+      const host = document.getElementById('host-input').value.trim();
+      const badge = document.getElementById('health-badge');
+      badge.className = 'badge badge-pending';
+      badge.textContent = 'Checking...';
+
+      try {
+        const res = await fetch(`/api/health?host=${encodeURIComponent(host)}`);
+        const data = await res.json();
+        if (data.success && (data.health.includes('"OK"') || data.health.includes('OK'))) {
+          badge.className = 'badge badge-ok';
+          badge.textContent = 'GraphHopper OK';
+        } else {
+          badge.className = 'badge badge-error';
+          badge.textContent = 'Host Offline';
+        }
+      } catch (err) {
+        badge.className = 'badge badge-error';
+        badge.textContent = 'Unreachable';
+      }
+    }
+
+    // Calculate Route
+    async function calculateRoute() {
+      const resultContainer = document.getElementById('result-container');
+      const btn = document.getElementById('btn-calculate');
+
+      if (!startMarker || !endMarker) {
+        resultContainer.innerHTML = `<div class="alert alert-error">Please set both Start (A) and Destination (B) points on the map.</div>`;
+        return;
+      }
+
+      const host = document.getElementById('host-input').value.trim();
+      const userJson = document.getElementById('user-json-input').value.trim();
+
+      // Validate JSON
+      try {
+        JSON.parse(userJson);
+      } catch (e) {
+        resultContainer.innerHTML = `<div class="alert alert-error">Invalid userJson: ${e.message}</div>`;
+        return;
+      }
+
+      const p1 = startMarker.getLatLng();
+      const p2 = endMarker.getLatLng();
+
+      const payload = {
+        host: host,
+        points: [
+          { lat: p1.lat, lng: p1.lng },
+          { lat: p2.lat, lng: p2.lng }
+        ],
+        userJson: userJson
+      };
+
+      btn.disabled = true;
+      btn.textContent = 'Computing Route...';
+      const indicator = document.getElementById('calc-indicator');
+      if (indicator) indicator.textContent = 'Computing...';
+      resultContainer.innerHTML = `<p class="help-hint">Calling AstreaEngine.AstreaRouteAsync...</p>`;
+
+      const startTime = performance.now();
+
+      try {
+        const res = await fetch('/api/route', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        const data = await res.json();
+        const duration = Math.round(performance.now() - startTime);
+
+        if (!data.success) {
+          if (indicator) indicator.textContent = 'Error';
+          resultContainer.innerHTML = `
+            <div class="alert alert-error">
+              <strong>Engine Error:</strong><br/>
+              ${data.error || 'Failed to compute route'}
+            </div>
+          `;
+          return;
+        }
+
+        const points = data.points; // Array of { lat, lng }
+        if (!points || points.length === 0) {
+          if (indicator) indicator.textContent = 'No route';
+          resultContainer.innerHTML = `<div class="alert alert-error">No route found between coordinates.</div>`;
+          return;
+        }
+
+        let activeProfile = 'wheelchair';
+        try {
+          activeProfile = (JSON.parse(userJson).profile || 'wheelchair').toLowerCase();
+        } catch {}
+
+        const routeColor = PROFILE_COLORS[activeProfile] || '#3b82f6';
+
+        // Draw Polyline
+        clearRoute();
+        const latLngs = points.map(p => [p.lat, p.lng]);
+        routeLayer = L.polyline(latLngs, {
+          color: routeColor,
+          weight: 5,
+          opacity: 0.9,
+          lineJoin: 'round'
+        }).addTo(map);
+
+        map.fitBounds(routeLayer.getBounds(), { padding: [40, 40] });
+
+        // Calculate rough distance
+        let totalMeters = 0;
+        for (let i = 1; i < latLngs.length; i++) {
+          totalMeters += L.latLng(latLngs[i - 1]).distanceTo(L.latLng(latLngs[i]));
+        }
+        const distanceStr = totalMeters > 1000
+          ? `${(totalMeters / 1000).toFixed(2)} km`
+          : `${Math.round(totalMeters)} m`;
+
+        const currentProfileName = JSON.parse(userJson).profile || 'Custom';
+        let comparisonHtml = '';
+        if (lastRouteStats && lastRouteStats.profile !== currentProfileName) {
+          const diffM = Math.round(totalMeters - lastRouteStats.totalMeters);
+          const diffStr = diffM > 0 ? `+${diffM} m longer` : `${Math.abs(diffM)} m shorter`;
+          const diffColor = diffM > 0 ? 'var(--warning)' : 'var(--success)';
+          comparisonHtml = `
+            <div style="grid-column: span 2; background: rgba(59, 130, 246, 0.12); border: 1px solid var(--accent); border-radius: 6px; padding: 8px 10px; font-size: 0.78rem;">
+              vs previous (<strong>${lastRouteStats.profile}</strong>, ${lastRouteStats.distanceStr}): <span style="color: ${diffColor}; font-weight: 700;">${diffStr}</span>
+            </div>
+          `;
+        }
+
+        lastRouteStats = {
+          profile: currentProfileName,
+          totalMeters: totalMeters,
+          distanceStr: distanceStr,
+          waypoints: points.length
+        };
+
+        if (indicator) {
+          indicator.textContent = '✓ Updated';
+          setTimeout(() => { if (indicator) indicator.textContent = ''; }, 2000);
+        }
+
+        resultContainer.innerHTML = `
+          <div class="alert alert-success" style="display: flex; align-items: center; justify-content: space-between;">
+            <span>Route computed successfully!</span>
+            <span class="badge" style="background: ${routeColor}22; color: ${routeColor}; border: 1px solid ${routeColor};">${currentProfileName}</span>
+          </div>
+          <div class="stats-grid">
+            ${comparisonHtml}
+            <div class="stat-card">
+              <div class="stat-label">Waypoints</div>
+              <div class="stat-value">${points.length}</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">Estimated Distance</div>
+              <div class="stat-value">${distanceStr}</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">Compute Time</div>
+              <div class="stat-value">${duration} ms</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">Profile</div>
+              <div class="stat-value" style="font-size: 0.85rem; text-transform: capitalize; color: ${routeColor};">
+                ${currentProfileName}
+              </div>
+            </div>
+          </div>
+          <details>
+            <summary>View Raw Coordinates (${points.length} pts)</summary>
+            <pre>${JSON.stringify(points, null, 2)}</pre>
+          </details>
+        `;
+      } catch (err) {
+        if (indicator) indicator.textContent = 'Network error';
+        resultContainer.innerHTML = `<div class="alert alert-error">Network request failed: ${err.message}</div>`;
+      } finally {
+        btn.disabled = false;
+        btn.textContent = '▶ Recalculate Route';
+      }
+    }
+
+    // Event listeners
+    document.getElementById('btn-health').addEventListener('click', checkHealth);
+    document.getElementById('btn-calculate').addEventListener('click', calculateRoute);
+
+    document.getElementById('btn-clear-points').addEventListener('click', () => {
+      if (startMarker && map) map.removeLayer(startMarker);
+      if (endMarker && map) map.removeLayer(endMarker);
+      startMarker = null;
+      endMarker = null;
+      clearRoute();
+      updateLabels();
+      lastRouteStats = null;
+      document.getElementById('result-container').innerHTML = `<p class="help-hint">Points cleared.</p>`;
+    });
+
+    document.getElementById('btn-reverse').addEventListener('click', () => {
+      if (!startMarker || !endMarker) return;
+      const p1 = startMarker.getLatLng();
+      const p2 = endMarker.getLatLng();
+      setStart(p2.lat, p2.lng);
+      setEnd(p1.lat, p1.lng);
+      triggerAutoCalculate();
+    });
+
+    document.getElementById('btn-preset-nantes').addEventListener('click', () => jumpLocation('nantes'));
+    document.getElementById('btn-preset-lille').addEventListener('click', () => jumpLocation('lille'));
+
+    document.getElementById('btn-format-json').addEventListener('click', () => {
+      const input = document.getElementById('user-json-input');
+      try {
+        const parsed = JSON.parse(input.value);
+        input.value = JSON.stringify(parsed, null, 2);
+      } catch (e) {
+        alert('Invalid JSON: ' + e.message);
+      }
+    });
+
+    let debounceTimer = null;
+    document.getElementById('user-json-input').addEventListener('input', () => {
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => {
+        try {
+          JSON.parse(document.getElementById('user-json-input').value);
+          triggerAutoCalculate();
+        } catch {
+          // ignore while typing invalid JSON
+        }
+      }, 400);
+    });
+
+    document.getElementById('chk-auto-calculate')?.addEventListener('change', (e) => {
+      if (e.target.checked) triggerAutoCalculate();
+    });
+
+    // Start on DOM ready
+    window.addEventListener('DOMContentLoaded', () => {
+      initMap();
+      checkHealth();
+      setPresetPoints('nantes');
+      setTimeout(() => {
+        calculateRoute();
+      }, 350);
+    });
+  </script>
+</body>
+</html>
