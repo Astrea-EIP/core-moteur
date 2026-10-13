@@ -49,3 +49,8 @@ test-lib:
 # Clean test artifacts
 clean-test:
     cd tests && dotnet clean && rm -rf bin obj
+
+# Run the interactive web playground to test routing with custom userJson
+playground:
+    open "http://localhost:5050"
+    cd playground && dotnet run
