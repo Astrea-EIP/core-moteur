@@ -20,13 +20,63 @@ const PRESETS = {
   }
 };
 
-const PROFILES = {
-  wheelchair: { profile: "wheelchair" },
-  blind: { profile: "blind" },
-  crutches: { profile: "crutches" },
-  walking: { profile: "walking" },
-  foot: { profile: "foot" }
+const PROFILE_PRESETS = {
+  wheelchair: {
+    profile: "wheelchair",
+    allow_stairs: false,
+    avoid_slopes: true,
+    max_slope: 8.0,
+    has_wheels: true,
+    blindness: false,
+    width: 0.9,
+    distance_influence: 70,
+    speed: 3.5
+  },
+  blind: {
+    profile: "blind",
+    allow_stairs: true,
+    avoid_slopes: false,
+    has_wheels: false,
+    blindness: true,
+    width: 0.7,
+    distance_influence: 80,
+    speed: 3.5
+  },
+  crutches: {
+    profile: "crutches",
+    allow_stairs: true,
+    stairs_penalty: 0.4,
+    avoid_slopes: true,
+    max_slope: 10.0,
+    has_wheels: false,
+    blindness: false,
+    width: 0.75,
+    distance_influence: 70,
+    speed: 3.0
+  },
+  walking: {
+    profile: "walking",
+    allow_stairs: true,
+    avoid_slopes: false,
+    has_wheels: false,
+    blindness: false,
+    width: 0.6,
+    distance_influence: 60,
+    speed: 5.0
+  }
 };
+
+const PROFILE_COLORS = {
+  wheelchair: '#3b82f6', // blue
+  blind: '#a855f7',      // purple
+  crutches: '#ec4899',   // pink
+  walking: '#10b981',    // emerald
+  custom: '#f59e0b'      // amber
+};
+
+let currentPreset = 'wheelchair';
+let isSyncing = false;
+let debounceTimer = null;
 
 function initMap() {
   try {
@@ -86,6 +136,7 @@ function onMapClick(e) {
     setStart(lat, lng);
   } else if (!endMarker) {
     setEnd(lat, lng);
+    triggerAutoCalculate();
   } else {
     setStart(lat, lng);
     clearEnd();
@@ -103,6 +154,7 @@ function setStart(lat, lng) {
 
   startMarker.on('dragend', () => {
     updateLabels();
+    triggerAutoCalculate();
   });
 
   updateLabels();
@@ -118,6 +170,7 @@ function setEnd(lat, lng) {
 
   endMarker.on('dragend', () => {
     updateLabels();
+    triggerAutoCalculate();
   });
 
   updateLabels();
@@ -160,8 +213,8 @@ function updateLabels() {
 function jumpLocation(key) {
   const p = PRESETS[key];
   if (!p) return;
-  document.getElementById('chip-nantes')?.classList.toggle('active', key === 'nantes');
-  document.getElementById('chip-lille')?.classList.toggle('active', key === 'lille');
+  document.getElementById('btn-preset-nantes')?.classList.toggle('active', key === 'nantes');
+  document.getElementById('btn-preset-lille')?.classList.toggle('active', key === 'lille');
   setPresetPoints(key);
 }
 
@@ -174,19 +227,147 @@ function setPresetPoints(key) {
   map.flyToBounds([p.start, p.end], { padding: [50, 50] });
 }
 
-function applyProfile(profileName) {
-  document.querySelectorAll('.preset-chips .chip').forEach(c => {
-    const txt = c.textContent.trim().toLowerCase();
-    if (txt === profileName.toLowerCase()) {
-      c.classList.add('active');
-    } else if (['wheelchair', 'blind', 'crutches', 'walking', 'foot'].includes(txt)) {
-      c.classList.remove('active');
+// -------------------------------------------------------------
+// Form Controls & JSON Bi-directional Synchronization
+// -------------------------------------------------------------
+
+function getUiState() {
+  const allowStairs = document.getElementById('ctrl-allow-stairs').checked;
+  const stairsPenalty = parseFloat(document.getElementById('ctrl-stairs-penalty').value);
+  const avoidSlopes = document.getElementById('ctrl-avoid-slopes').checked;
+  const maxSlope = parseFloat(document.getElementById('ctrl-max-slope').value);
+  const hasWheels = document.getElementById('ctrl-has-wheels').checked;
+  const blindness = document.getElementById('ctrl-blindness').checked;
+  const width = parseFloat(document.getElementById('ctrl-width').value);
+  const distanceInfluence = parseInt(document.getElementById('ctrl-distance-influence').value, 10);
+
+  const state = {
+    profile: currentPreset
+  };
+
+  if (!allowStairs) {
+    state.allow_stairs = false;
+  } else {
+    state.allow_stairs = true;
+    if (stairsPenalty < 1.0) {
+      state.stairs_penalty = stairsPenalty;
     }
+  }
+
+  if (avoidSlopes) {
+    state.avoid_slopes = true;
+    state.max_slope = maxSlope;
+  } else {
+    state.avoid_slopes = false;
+  }
+
+  if (hasWheels) state.has_wheels = true;
+  if (blindness) state.blindness = true;
+  if (!isNaN(width)) state.width = width;
+  if (!isNaN(distanceInfluence)) state.distance_influence = distanceInfluence;
+
+  return state;
+}
+
+function updateUiFromState(obj) {
+  if (isSyncing) return;
+  isSyncing = true;
+
+  try {
+    const rawPreset = (obj.profile || '').toLowerCase();
+    const presetConfig = PROFILE_PRESETS[rawPreset];
+    const data = presetConfig ? { ...presetConfig, ...obj } : obj;
+
+    currentPreset = ['wheelchair', 'blind', 'crutches', 'walking'].includes(rawPreset) ? rawPreset : 'custom';
+    document.querySelectorAll('.preset-chips .chip').forEach(c => {
+      c.classList.toggle('active', c.dataset.preset === currentPreset);
+    });
+
+    const allowStairs = data.allow_stairs !== undefined ? Boolean(data.allow_stairs) : (data.avoid_stairs !== undefined ? !data.avoid_stairs : true);
+    document.getElementById('ctrl-allow-stairs').checked = allowStairs;
+
+    const penaltyVal = data.stairs_penalty !== undefined ? parseFloat(data.stairs_penalty) : 0.3;
+    document.getElementById('ctrl-stairs-penalty').value = penaltyVal;
+    document.getElementById('val-stairs-penalty').textContent = penaltyVal.toFixed(2);
+    document.getElementById('row-stairs-penalty').style.display = allowStairs ? 'flex' : 'none';
+
+    const avoidSlopes = data.avoid_slopes !== undefined ? Boolean(data.avoid_slopes) : (data.slope !== undefined ? !data.slope : false);
+    document.getElementById('ctrl-avoid-slopes').checked = avoidSlopes;
+
+    const maxSlopeVal = data.max_slope !== undefined ? parseFloat(data.max_slope) : 8.0;
+    document.getElementById('ctrl-max-slope').value = maxSlopeVal;
+    document.getElementById('val-max-slope').textContent = `${maxSlopeVal}%`;
+    document.getElementById('row-max-slope').style.display = avoidSlopes ? 'flex' : 'none';
+
+    const hasWheels = Boolean(data.has_wheels || data.wheels);
+    document.getElementById('ctrl-has-wheels').checked = hasWheels;
+
+    const blindness = Boolean(data.blindness || data.blind);
+    document.getElementById('ctrl-blindness').checked = blindness;
+
+    const widthVal = data.width !== undefined ? parseFloat(data.width) : 0.8;
+    document.getElementById('ctrl-width').value = widthVal;
+    document.getElementById('val-width').textContent = `${widthVal}m`;
+
+    const distVal = data.distance_influence !== undefined ? parseInt(data.distance_influence, 10) : 70;
+    document.getElementById('ctrl-distance-influence').value = distVal;
+    document.getElementById('val-distance-influence').textContent = distVal;
+
+  } finally {
+    isSyncing = false;
+  }
+}
+
+function syncUiToJson() {
+  if (isSyncing) return;
+  isSyncing = true;
+  try {
+    const state = getUiState();
+    const jsonStr = JSON.stringify(state, null, 2);
+    document.getElementById('user-json-input').value = jsonStr;
+  } finally {
+    isSyncing = false;
+  }
+  triggerAutoCalculate();
+}
+
+function setPreset(presetName, shouldSync = true) {
+  currentPreset = presetName;
+
+  document.querySelectorAll('.preset-chips .chip').forEach(c => {
+    c.classList.toggle('active', c.dataset.preset === presetName);
   });
 
-  const profile = PROFILES[profileName] || { profile: profileName };
-  document.getElementById('user-json-input').value = JSON.stringify(profile, null, 2);
+  if (PROFILE_PRESETS[presetName]) {
+    const config = PROFILE_PRESETS[presetName];
+    updateUiFromState(config);
+    if (shouldSync) {
+      document.getElementById('user-json-input').value = JSON.stringify(config, null, 2);
+      triggerAutoCalculate();
+    }
+  }
 }
+
+function triggerAutoCalculate() {
+  const auto = document.getElementById('chk-auto-calculate')?.checked ?? true;
+  if (!auto) return;
+
+  const indicator = document.getElementById('calc-indicator');
+  if (indicator) indicator.textContent = 'Updating...';
+
+  clearTimeout(debounceTimer);
+  debounceTimer = setTimeout(() => {
+    if (startMarker && endMarker) {
+      calculateRoute();
+    } else if (indicator) {
+      indicator.textContent = '';
+    }
+  }, 300);
+}
+
+// -------------------------------------------------------------
+// Health and Routing APIs
+// -------------------------------------------------------------
 
 async function checkHealth() {
   const host = document.getElementById('host-input').value.trim();
@@ -213,9 +394,11 @@ async function checkHealth() {
 async function calculateRoute() {
   const resultContainer = document.getElementById('result-container');
   const btn = document.getElementById('btn-calculate');
+  const indicator = document.getElementById('calc-indicator');
 
   if (!startMarker || !endMarker) {
     resultContainer.innerHTML = `<div class="alert alert-error">Please set both Start (A) and Destination (B) points on the map.</div>`;
+    if (indicator) indicator.textContent = '';
     return;
   }
 
@@ -226,6 +409,7 @@ async function calculateRoute() {
     JSON.parse(userJson);
   } catch (e) {
     resultContainer.innerHTML = `<div class="alert alert-error">Invalid userJson: ${e.message}</div>`;
+    if (indicator) indicator.textContent = '';
     return;
   }
 
@@ -243,7 +427,7 @@ async function calculateRoute() {
 
   btn.disabled = true;
   btn.textContent = 'Computing Route...';
-  resultContainer.innerHTML = `<p class="help-hint">Calling AstreaEngine.AstreaRouteAsync...</p>`;
+  if (indicator) indicator.textContent = 'Calculating...';
 
   const startTime = performance.now();
 
@@ -264,19 +448,23 @@ async function calculateRoute() {
           ${data.error || 'Failed to compute route'}
         </div>
       `;
+      if (indicator) indicator.textContent = 'Error';
       return;
     }
 
     const points = data.points;
     if (!points || points.length === 0) {
       resultContainer.innerHTML = `<div class="alert alert-error">No route found between coordinates.</div>`;
+      if (indicator) indicator.textContent = 'No route';
       return;
     }
 
     clearRoute();
     const latLngs = points.map(p => [p.lat, p.lng]);
+    const routeColor = PROFILE_COLORS[currentPreset] || '#3b82f6';
+
     routeLayer = L.polyline(latLngs, {
-      color: '#3b82f6',
+      color: routeColor,
       weight: 5,
       opacity: 0.9,
       lineJoin: 'round'
@@ -292,10 +480,18 @@ async function calculateRoute() {
       ? `${(totalMeters / 1000).toFixed(2)} km`
       : `${Math.round(totalMeters)} m`;
 
-    let profileName = 'Custom';
+    let speedKmH = 4.0;
     try {
-      profileName = JSON.parse(userJson).profile || 'Custom';
-    } catch {}
+      const parsed = JSON.parse(userJson);
+      if (parsed.speed) speedKmH = parseFloat(parsed.speed);
+      else if (parsed.max_speed) speedKmH = parseFloat(parsed.max_speed);
+      else if (PROFILE_PRESETS[currentPreset]?.speed) speedKmH = PROFILE_PRESETS[currentPreset].speed;
+      else speedKmH = currentPreset === 'crutches' ? 3.0 : (currentPreset === 'blind' || currentPreset === 'wheelchair' ? 3.5 : 4.0);
+    } catch {
+      speedKmH = PROFILE_PRESETS[currentPreset]?.speed || 4.0;
+    }
+    let estMinutes = Math.round((totalMeters / 1000) / speedKmH * 60);
+    if (estMinutes < 1) estMinutes = 1;
 
     resultContainer.innerHTML = `
       <div class="alert alert-success">Route computed successfully!</div>
@@ -309,14 +505,12 @@ async function calculateRoute() {
           <div class="stat-value">${distanceStr}</div>
         </div>
         <div class="stat-card">
-          <div class="stat-label">Compute Time</div>
-          <div class="stat-value">${duration} ms</div>
+          <div class="stat-label">Est. Time (@${speedKmH} km/h)</div>
+          <div class="stat-value">${estMinutes} min</div>
         </div>
         <div class="stat-card">
-          <div class="stat-label">Profile</div>
-          <div class="stat-value" style="font-size: 0.85rem; text-transform: capitalize;">
-            ${profileName}
-          </div>
+          <div class="stat-label">Compute Time</div>
+          <div class="stat-value">${duration} ms</div>
         </div>
       </div>
       <details>
@@ -324,19 +518,106 @@ async function calculateRoute() {
         <pre>${JSON.stringify(points, null, 2)}</pre>
       </details>
     `;
+    if (indicator) indicator.textContent = 'Done';
   } catch (err) {
     resultContainer.innerHTML = `<div class="alert alert-error">Network request failed: ${err.message}</div>`;
+    if (indicator) indicator.textContent = 'Failed';
   } finally {
     btn.disabled = false;
-    btn.textContent = '▶ Calculate Route via AstreaEngine';
+    btn.textContent = '▶ Recalculate Route';
   }
 }
+
+// -------------------------------------------------------------
+// DOM Event Listeners
+// -------------------------------------------------------------
 
 document.addEventListener('DOMContentLoaded', () => {
   initMap();
   checkHealth();
   setPresetPoints('nantes');
 
+  // Preset chips
+  document.querySelectorAll('.preset-chips .chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      const preset = chip.dataset.preset;
+      setPreset(preset, true);
+    });
+  });
+
+  // Toggle switch listeners
+  document.getElementById('ctrl-allow-stairs').addEventListener('change', (e) => {
+    document.getElementById('row-stairs-penalty').style.display = e.target.checked ? 'flex' : 'none';
+    currentPreset = 'custom';
+    document.querySelectorAll('.preset-chips .chip').forEach(c => c.classList.toggle('active', c.dataset.preset === 'custom'));
+    syncUiToJson();
+  });
+
+  document.getElementById('ctrl-avoid-slopes').addEventListener('change', (e) => {
+    document.getElementById('row-max-slope').style.display = e.target.checked ? 'flex' : 'none';
+    currentPreset = 'custom';
+    document.querySelectorAll('.preset-chips .chip').forEach(c => c.classList.toggle('active', c.dataset.preset === 'custom'));
+    syncUiToJson();
+  });
+
+  document.getElementById('ctrl-has-wheels').addEventListener('change', () => {
+    currentPreset = 'custom';
+    document.querySelectorAll('.preset-chips .chip').forEach(c => c.classList.toggle('active', c.dataset.preset === 'custom'));
+    syncUiToJson();
+  });
+
+  document.getElementById('ctrl-blindness').addEventListener('change', () => {
+    currentPreset = 'custom';
+    document.querySelectorAll('.preset-chips .chip').forEach(c => c.classList.toggle('active', c.dataset.preset === 'custom'));
+    syncUiToJson();
+  });
+
+  // Slider listeners
+  const stairsSlider = document.getElementById('ctrl-stairs-penalty');
+  stairsSlider.addEventListener('input', () => {
+    document.getElementById('val-stairs-penalty').textContent = parseFloat(stairsSlider.value).toFixed(2);
+    currentPreset = 'custom';
+    document.querySelectorAll('.preset-chips .chip').forEach(c => c.classList.toggle('active', c.dataset.preset === 'custom'));
+    syncUiToJson();
+  });
+
+  const slopeSlider = document.getElementById('ctrl-max-slope');
+  slopeSlider.addEventListener('input', () => {
+    document.getElementById('val-max-slope').textContent = `${slopeSlider.value}%`;
+    currentPreset = 'custom';
+    document.querySelectorAll('.preset-chips .chip').forEach(c => c.classList.toggle('active', c.dataset.preset === 'custom'));
+    syncUiToJson();
+  });
+
+  const widthSlider = document.getElementById('ctrl-width');
+  widthSlider.addEventListener('input', () => {
+    document.getElementById('val-width').textContent = `${widthSlider.value}m`;
+    currentPreset = 'custom';
+    document.querySelectorAll('.preset-chips .chip').forEach(c => c.classList.toggle('active', c.dataset.preset === 'custom'));
+    syncUiToJson();
+  });
+
+  const distSlider = document.getElementById('ctrl-distance-influence');
+  distSlider.addEventListener('input', () => {
+    document.getElementById('val-distance-influence').textContent = distSlider.value;
+    currentPreset = 'custom';
+    document.querySelectorAll('.preset-chips .chip').forEach(c => c.classList.toggle('active', c.dataset.preset === 'custom'));
+    syncUiToJson();
+  });
+
+  // Raw JSON input listener
+  const jsonInput = document.getElementById('user-json-input');
+  jsonInput.addEventListener('input', () => {
+    try {
+      const parsed = JSON.parse(jsonInput.value);
+      updateUiFromState(parsed);
+      triggerAutoCalculate();
+    } catch {
+      // Ignore invalid JSON while user is typing
+    }
+  });
+
+  // Action buttons
   document.getElementById('btn-health')?.addEventListener('click', checkHealth);
   document.getElementById('btn-calculate')?.addEventListener('click', calculateRoute);
 
@@ -356,20 +637,39 @@ document.addEventListener('DOMContentLoaded', () => {
     const p2 = endMarker.getLatLng();
     setStart(p2.lat, p2.lng);
     setEnd(p1.lat, p1.lng);
-    if (routeLayer) calculateRoute();
+    triggerAutoCalculate();
   });
 
-  document.getElementById('btn-preset-nantes')?.addEventListener('click', () => jumpLocation('nantes'));
-  document.getElementById('btn-preset-lille')?.addEventListener('click', () => jumpLocation('lille'));
+  document.getElementById('btn-preset-nantes')?.addEventListener('click', () => {
+    jumpLocation('nantes');
+    triggerAutoCalculate();
+  });
+  document.getElementById('btn-preset-lille')?.addEventListener('click', () => {
+    jumpLocation('lille');
+    triggerAutoCalculate();
+  });
 
   document.getElementById('btn-format-json')?.addEventListener('click', () => {
-    const input = document.getElementById('user-json-input');
     try {
-      const parsed = JSON.parse(input.value);
-      input.value = JSON.stringify(parsed, null, 2);
+      const parsed = JSON.parse(jsonInput.value);
+      jsonInput.value = JSON.stringify(parsed, null, 2);
     } catch (e) {
       alert('Invalid JSON: ' + e.message);
     }
   });
-});
 
+  document.getElementById('btn-copy-json')?.addEventListener('click', () => {
+    navigator.clipboard?.writeText(jsonInput.value);
+    const btn = document.getElementById('btn-copy-json');
+    btn.textContent = 'Copied!';
+    setTimeout(() => { btn.textContent = 'Copy'; }, 1500);
+  });
+
+  // Initialize with wheelchair preset
+  setPreset('wheelchair', true);
+
+  // Trigger initial calculation
+  setTimeout(() => {
+    calculateRoute();
+  }, 400);
+});

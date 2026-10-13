@@ -42,6 +42,15 @@ namespace AstreaEngine
                         return result;
                     }
                 }
+
+                if (jsonNode?["error"] != null)
+                {
+                    throw new InvalidDataException($"API error: {jsonNode["error"]?.ToString()}");
+                }
+                if (jsonNode?["message"] != null)
+                {
+                    throw new InvalidDataException($"GraphHopper error: {jsonNode["message"]?.ToString()}");
+                }
                 throw new InvalidDataException("JSON response does not contain expected route structure.");
             }
             catch (InvalidDataException)
@@ -61,14 +70,17 @@ namespace AstreaEngine
                 throw new ValidationException("At least 2 points are required for routing.");
             }
 
-            JsonNode? user;
-            try
+            JsonNode? user = null;
+            if (!string.IsNullOrWhiteSpace(userJson))
             {
-                user = JsonNode.Parse(userJson);
-            }
-            catch
-            {
-                throw new ValidationException("Invalid user JSON.");
+                try
+                {
+                    user = JsonNode.Parse(userJson);
+                }
+                catch (Exception ex)
+                {
+                    throw new ValidationException("Invalid user JSON.", ex);
+                }
             }
 
             // Build the points array for the request
@@ -87,6 +99,15 @@ namespace AstreaEngine
                 {
                     pointsArray.Add(new JsonArray { lng, lat });
                 }
+                else
+                {
+                    throw new ValidationException($"Invalid coordinate format: '{point}'. Expected 'lat,lng'.");
+                }
+            }
+
+            if (pointsArray.Count < 2)
+            {
+                throw new ValidationException("At least 2 valid points are required for routing.");
             }
 
             var jsonBody = new JsonObject
@@ -102,14 +123,11 @@ namespace AstreaEngine
             if (user == null)
             {
                 jsonBody["profile"] = "foot";
-                jsonBody["ch.disable"] = "false";
                 jsonBody["ch.disable"] = false;
             }
             else
             {
-                jsonBody["ch.disable"] = "true";
-                jsonBody["ch.disable"] = true;
-                CustomUserModel.buildCustomModel(jsonBody, user);
+                CustomUserModel.BuildCustomModel(jsonBody, user);
             }
 
             var responseJson = await HttpCalls.DoGetAsync(host, $"/route", jsonBody.ToJsonString());
@@ -120,6 +138,11 @@ namespace AstreaEngine
                 if (jsonNode?["error"] != null)
                 {
                     throw new InvalidOperationException($"API error: {jsonNode["error"]?.ToString()}");
+                }
+
+                if (jsonNode?["message"] != null)
+                {
+                    throw new InvalidOperationException($"API error: {jsonNode["message"]?.ToString()}");
                 }
             }
             catch (InvalidOperationException)
