@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AstreaEngine Routing Playground</title>
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <!-- App Stylesheet -->
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <aside id="sidebar">
+    <!-- Header -->
+    <header id="sidebar-header">
+      <h1>
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"></circle>
+          <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"></polygon>
+        </svg>
+        AstreaEngine
+      </h1>
+      <span id="health-badge" class="badge badge-pending">Checking...</span>
+    </header>
+
+    <!-- Host Config Section -->
+    <div class="section">
+      <div class="section-title">Backend Connection</div>
+      <div class="field-row">
+        <div class="field">
+          <input type="text" id="host-input" value="http://localhost:8989" placeholder="http://localhost:8989" />
+        </div>
+        <button id="btn-health" class="btn-secondary" title="Check Health">Ping</button>
+      </div>
+    </div>
+
+    <!-- Map Points Section -->
+    <div class="section">
+      <div class="section-title">
+        <span>Waypoints</span>
+        <div class="btn-group">
+          <button id="btn-reverse" class="btn-outline" style="padding: 2px 8px; font-size: 0.72rem;" title="Swap Start and Destination">⇄ Swap</button>
+          <button id="btn-clear-points" class="btn-outline" style="padding: 2px 8px; font-size: 0.72rem;">Clear</button>
+        </div>
+      </div>
+
+      <div class="point-indicator">
+        <span class="point-dot start"></span>
+        <span style="font-weight: 600; width: 60px;">Start (A):</span>
+        <span id="label-start" class="range-val" style="flex: 1; text-align: left;">Not set</span>
+      </div>
+
+      <div class="point-indicator">
+        <span class="point-dot end"></span>
+        <span style="font-weight: 600; width: 60px;">End (B):</span>
+        <span id="label-end" class="range-val" style="flex: 1; text-align: left;">Not set</span>
+      </div>
+
+      <div style="display: flex; gap: 6px; margin-top: 10px;">
+        <button id="btn-preset-nantes" class="chip active" style="flex: 1;">Nantes (Test)</button>
+        <button id="btn-preset-lille" class="chip" style="flex: 1;">Lille (Test)</button>
+      </div>
+      <p class="help-hint">Click on map to place Start & Destination or drag markers.</p>
+    </div>
+
+    <!-- Accessibility Profile Section -->
+    <div class="section">
+      <div class="section-title">
+        <span>Accessibility Profile</span>
+      </div>
+
+      <!-- Preset Chips -->
+      <div class="preset-chips">
+        <span class="chip active" data-preset="wheelchair">Wheelchair</span>
+        <span class="chip" data-preset="blind">Blind</span>
+        <span class="chip" data-preset="crutches">Crutches</span>
+        <span class="chip" data-preset="walking">Walking</span>
+        <span class="chip" data-preset="custom">Custom</span>
+      </div>
+
+      <!-- Feature Controls -->
+      <div id="feature-controls">
+        <!-- Stairs & Steps -->
+        <div class="feature-card">
+          <div class="feature-header">
+            <span class="feature-title">
+              🪜 Stairs & Steps
+            </span>
+            <label class="switch">
+              <input type="checkbox" id="ctrl-allow-stairs" />
+              <span class="slider"></span>
+            </label>
+          </div>
+          <div class="feature-desc">Avoid or navigate stairs/steps (road_class == STEPS)</div>
+          <div class="feature-subrow" id="row-stairs-penalty">
+            <label for="ctrl-stairs-penalty">Stairs Penalty factor:</label>
+            <div class="range-container">
+              <input type="range" id="ctrl-stairs-penalty" min="0" max="1" step="0.05" value="0.3" />
+              <span id="val-stairs-penalty" class="range-val">0.3</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Incline & Slopes -->
+        <div class="feature-card">
+          <div class="feature-header">
+            <span class="feature-title">
+              ⛰️ Incline & Slopes
+            </span>
+            <label class="switch">
+              <input type="checkbox" id="ctrl-avoid-slopes" checked />
+              <span class="slider"></span>
+            </label>
+          </div>
+          <div class="feature-desc">Limit steep routes based on average and max slope</div>
+          <div class="feature-subrow" id="row-max-slope">
+            <label for="ctrl-max-slope">Max Slope (%):</label>
+            <div class="range-container">
+              <input type="range" id="ctrl-max-slope" min="3" max="20" step="0.5" value="8" />
+              <span id="val-max-slope" class="range-val">8%</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Wheels & Smoothness -->
+        <div class="feature-card">
+          <div class="feature-header">
+            <span class="feature-title">
+              🦽 Wheels / Wheelchair
+            </span>
+            <label class="switch">
+              <input type="checkbox" id="ctrl-has-wheels" checked />
+              <span class="slider"></span>
+            </label>
+          </div>
+          <div class="feature-desc">Prioritize sidewalks, penalize cobblestone, forbid impassable paths</div>
+        </div>
+
+        <!-- Visual Impairment -->
+        <div class="feature-card">
+          <div class="feature-header">
+            <span class="feature-title">
+              🦯 Visual Impairment / Blind
+            </span>
+            <label class="switch">
+              <input type="checkbox" id="ctrl-blindness" />
+              <span class="slider"></span>
+            </label>
+          </div>
+          <div class="feature-desc">Prioritize traffic signal crossings and tactile paving</div>
+        </div>
+
+        <!-- Dimensions & Width -->
+        <div class="feature-card">
+          <div class="feature-header">
+            <span class="feature-title">
+              📐 Dimensions & Clearance
+            </span>
+          </div>
+          <div class="feature-subrow">
+            <label for="ctrl-width">Max Width (m):</label>
+            <div class="range-container">
+              <input type="range" id="ctrl-width" min="0.6" max="2.0" step="0.05" value="0.8" />
+              <span id="val-width" class="range-val">0.8m</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Speed & Distance Influence -->
+        <div class="feature-card">
+          <div class="feature-header">
+            <span class="feature-title">
+              ⚙️ Distance vs Comfort
+            </span>
+          </div>
+          <div class="feature-subrow">
+            <label for="ctrl-distance-influence">Distance Influence:</label>
+            <div class="range-container">
+              <input type="range" id="ctrl-distance-influence" min="0" max="100" step="5" value="70" />
+              <span id="val-distance-influence" class="range-val">70</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Raw JSON Synchronization (Collapsible) -->
+      <details id="details-raw-json">
+        <summary>Raw JSON (Bi-directional Sync)</summary>
+        <div style="margin-top: 8px;">
+          <div style="display: flex; justify-content: flex-end; gap: 6px; margin-bottom: 6px;">
+            <button id="btn-format-json" class="btn-outline" style="padding: 2px 8px; font-size: 0.7rem;">Format</button>
+            <button id="btn-copy-json" class="btn-outline" style="padding: 2px 8px; font-size: 0.7rem;">Copy</button>
+          </div>
+          <textarea id="user-json-input" spellcheck="false"></textarea>
+        </div>
+      </details>
+
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 12px;">
+        <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 0.75rem; color: var(--text-muted); user-select: none;">
+          <input type="checkbox" id="chk-auto-calculate" checked style="width: auto; cursor: pointer;" />
+          Auto-calculate on change
+        </label>
+        <span id="calc-indicator" style="font-size: 0.72rem; color: var(--text-muted);"></span>
+      </div>
+
+      <button id="btn-calculate" class="btn-primary" style="width: 100%; margin-top: 8px; padding: 10px;">
+        ▶ Recalculate Route
+      </button>
+    </div>
+
+    <!-- Results Section -->
+    <div class="section" style="flex: 1;">
+      <div class="section-title">Result</div>
+      <div id="result-container">
+        <p class="help-hint">Place waypoints and click "Calculate Route" to run the algorithm.</p>
+      </div>
+    </div>
+  </aside>
+
+  <main id="map"></main>
+
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <!-- Application JS -->
+  <script src="app.js"></script>
+</body>
+</html>
