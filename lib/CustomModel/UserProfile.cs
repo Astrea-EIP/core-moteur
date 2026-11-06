@@ -1,4 +1,4 @@
-// <copyright file="UserProfile.cs" company="Astrea">
+﻿// <copyright file="UserProfile.cs" company="Astrea">
 // Copyright (c) Astrea. All rights reserved.
 // </copyright>
 
@@ -130,12 +130,12 @@ namespace AstreaEngine
                 }
             }
 
-            // Populate ExtraProperties with arbitrary unmapped fields
+            // Throw exception if there are any unknown properties in the JSON that are not part of the known property names
             foreach (var kvp in obj)
             {
-                if (!KnownPropertyNames.Contains(kvp.Key) && kvp.Value != null)
+                if (!KnownPropertyNames.Contains(kvp.Key))
                 {
-                    profile.ExtraProperties[kvp.Key] = kvp.Value.ToString();
+                    throw new ArgumentException($"Unknown property '{kvp.Key}' in user profile JSON.");
                 }
             }
 
