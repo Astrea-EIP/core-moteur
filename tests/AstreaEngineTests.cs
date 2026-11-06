@@ -424,18 +424,11 @@ namespace AstreaEngineTests
         }
 
         [Fact]
-        public void UserProfile_Parse_RetainsExtraProperties()
+        public void UserProfile_Parse_ThrowsOnUnknownProperty()
         {
-            var json = JsonNode.Parse("{\"profile\": \"wheelchair\", \"custom_tag\": \"preferred\", \"level\": 42, \"allow_stairs\": false}");
-            var profile = UserProfile.Parse(json);
-
-            Assert.True(profile.HasWheels);
-            Assert.True(profile.ExtraProperties.ContainsKey("custom_tag"));
-            Assert.Equal("preferred", profile.ExtraProperties["custom_tag"]?.ToString());
-            Assert.True(profile.ExtraProperties.ContainsKey("level"));
-            Assert.Equal("42", profile.ExtraProperties["level"]?.ToString());
-            Assert.True(profile.ExtraProperties.ContainsKey("allow_stairs"));
-            Assert.Equal("false", profile.ExtraProperties["allow_stairs"]?.ToString());
+            var json = JsonNode.Parse("{\"profile\": \"wheelchair\", \"custom_tag\": \"preferred\"}");
+            var ex = Assert.Throws<ArgumentException>(() => UserProfile.Parse(json));
+            Assert.Contains("Unknown property 'custom_tag'", ex.Message);
         }
 
         [Fact]
