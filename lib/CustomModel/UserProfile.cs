@@ -51,35 +51,15 @@ namespace AstreaEngine
             Map("preset", (profile, v) => ApplyPreset(profile, v), TryGetString),
             Map("name", (profile, v) => ApplyPreset(profile, v), TryGetString),
 
-            Map("allow_stairs", (profile, v) => profile.CanTakeStairs = v, TryGetBoolean),
             Map("can_take_stairs", (profile, v) => profile.CanTakeStairs = v, TryGetBoolean),
-            Map("stairs", (profile, v) => profile.CanTakeStairs = v, TryGetBoolean),
-            Map("avoid_stairs", (profile, v) => profile.CanTakeStairs = !v, TryGetBoolean),
-            Map("no_stairs", (profile, v) => profile.CanTakeStairs = !v, TryGetBoolean),
             Map("stairs_penalty", (profile, v) => profile.StairsPenalty = v, TryGetDouble),
-
             Map("max_slope", (profile, v) => { profile.MaxSlope = v; profile.AvoidSlopes = true; }, TryGetDouble),
-            Map("slope", (profile, v) => { profile.MaxSlope = v; profile.AvoidSlopes = true; }, TryGetDouble),
             Map("avoid_slopes", (profile, v) => profile.AvoidSlopes = v, TryGetBoolean),
-            Map("avoid_slope", (profile, v) => profile.AvoidSlopes = v, TryGetBoolean),
-            Map("slope", (profile, v) => profile.AvoidSlopes = !v, TryGetBoolean),
-            Map("slopes", (profile, v) => profile.AvoidSlopes = !v, TryGetBoolean),
-
             Map("has_wheels", (profile, v) => profile.HasWheels = v, TryGetBoolean),
-            Map("wheels", (profile, v) => profile.HasWheels = v, TryGetBoolean),
-            Map("wheel", (profile, v) => profile.HasWheels = v, TryGetBoolean),
-
-            Map("blind", (profile, v) => profile.Blindness = v, TryGetBoolean),
             Map("blindness", (profile, v) => profile.Blindness = v, TryGetBoolean),
-
             Map("width", (profile, v) => profile.Width = v, TryGetDouble),
-            Map("max_width", (profile, v) => profile.Width = v, TryGetDouble),
             Map("length", (profile, v) => profile.Length = v, TryGetDouble),
-            Map("max_length", (profile, v) => profile.Length = v, TryGetDouble),
-
-            Map("speed", (profile, v) => profile.MaxSpeed = v, TryGetDouble),
             Map("max_speed", (profile, v) => profile.MaxSpeed = v, TryGetDouble),
-
             Map("distance_influence", (profile, v) => profile.DistanceInfluence = v, TryGetInt),
         };
 
@@ -165,12 +145,12 @@ namespace AstreaEngine
         private static readonly HashSet<string> KnownPropertyNames = new(StringComparer.OrdinalIgnoreCase)
         {
             "profile", "preset", "name",
-            "allow_stairs", "can_take_stairs", "stairs", "avoid_stairs", "no_stairs", "stairs_penalty",
-            "avoid_slopes", "avoid_slope", "slope", "slopes", "max_slope",
-            "has_wheels", "wheels", "wheel",
-            "blind", "blindness",
-            "width", "max_width", "length", "max_length",
-            "speed", "max_speed",
+            "can_take_stairs", "stairs_penalty",
+            "max_slope", "avoid_slopes",
+            "has_wheels",
+            "blindness",
+            "width", "length",
+            "max_speed",
             "distance_influence", "dimensions"
         };
 

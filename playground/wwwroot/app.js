@@ -23,28 +23,28 @@ const PRESETS = {
 const PROFILE_PRESETS = {
   wheelchair: {
     profile: "wheelchair",
-    allow_stairs: false,
+    can_take_stairs: false,
     avoid_slopes: true,
     max_slope: 8.0,
     has_wheels: true,
     blindness: false,
     width: 0.9,
     distance_influence: 70,
-    speed: 3.5
+    max_speed: 3.5
   },
   blind: {
     profile: "blind",
-    allow_stairs: true,
+    can_take_stairs: true,
     avoid_slopes: false,
     has_wheels: false,
     blindness: true,
     width: 0.7,
     distance_influence: 80,
-    speed: 3.5
+    max_speed: 3.5
   },
   crutches: {
     profile: "crutches",
-    allow_stairs: true,
+    can_take_stairs: true,
     stairs_penalty: 0.4,
     avoid_slopes: true,
     max_slope: 10.0,
@@ -52,17 +52,17 @@ const PROFILE_PRESETS = {
     blindness: false,
     width: 0.75,
     distance_influence: 70,
-    speed: 3.0
+    max_speed: 3.0
   },
   walking: {
     profile: "walking",
-    allow_stairs: true,
+    can_take_stairs: true,
     avoid_slopes: false,
     has_wheels: false,
     blindness: false,
     width: 0.6,
     distance_influence: 60,
-    speed: 5.0
+    max_speed: 5.0
   }
 };
 
@@ -232,7 +232,7 @@ function setPresetPoints(key) {
 // -------------------------------------------------------------
 
 function getUiState() {
-  const allowStairs = document.getElementById('ctrl-allow-stairs').checked;
+  const allowStairs = document.getElementById('ctrl-can-take-stairs').checked;
   const stairsPenalty = parseFloat(document.getElementById('ctrl-stairs-penalty').value);
   const avoidSlopes = document.getElementById('ctrl-avoid-slopes').checked;
   const maxSlope = parseFloat(document.getElementById('ctrl-max-slope').value);
@@ -246,9 +246,9 @@ function getUiState() {
   };
 
   if (!allowStairs) {
-    state.allow_stairs = false;
+    state.can_take_stairs = false;
   } else {
-    state.allow_stairs = true;
+    state.can_take_stairs = true;
     if (stairsPenalty < 1.0) {
       state.stairs_penalty = stairsPenalty;
     }
@@ -283,15 +283,15 @@ function updateUiFromState(obj) {
       c.classList.toggle('active', c.dataset.preset === currentPreset);
     });
 
-    const allowStairs = data.allow_stairs !== undefined ? Boolean(data.allow_stairs) : (data.avoid_stairs !== undefined ? !data.avoid_stairs : true);
-    document.getElementById('ctrl-allow-stairs').checked = allowStairs;
+    const allowStairs = data.can_take_stairs !== undefined ? Boolean(data.can_take_stairs) : true;
+    document.getElementById('ctrl-can-take-stairs').checked = allowStairs;
 
     const penaltyVal = data.stairs_penalty !== undefined ? parseFloat(data.stairs_penalty) : 0.3;
     document.getElementById('ctrl-stairs-penalty').value = penaltyVal;
     document.getElementById('val-stairs-penalty').textContent = penaltyVal.toFixed(2);
     document.getElementById('row-stairs-penalty').style.display = allowStairs ? 'flex' : 'none';
 
-    const avoidSlopes = data.avoid_slopes !== undefined ? Boolean(data.avoid_slopes) : (data.slope !== undefined ? !data.slope : false);
+    const avoidSlopes = data.avoid_slopes !== undefined ? Boolean(data.avoid_slopes) : false;
     document.getElementById('ctrl-avoid-slopes').checked = avoidSlopes;
 
     const maxSlopeVal = data.max_slope !== undefined ? parseFloat(data.max_slope) : 8.0;
@@ -299,10 +299,10 @@ function updateUiFromState(obj) {
     document.getElementById('val-max-slope').textContent = `${maxSlopeVal}%`;
     document.getElementById('row-max-slope').style.display = avoidSlopes ? 'flex' : 'none';
 
-    const hasWheels = Boolean(data.has_wheels || data.wheels);
+    const hasWheels = Boolean(data.has_wheels);
     document.getElementById('ctrl-has-wheels').checked = hasWheels;
 
-    const blindness = Boolean(data.blindness || data.blind);
+    const blindness = Boolean(data.blindness);
     document.getElementById('ctrl-blindness').checked = blindness;
 
     const widthVal = data.width !== undefined ? parseFloat(data.width) : 0.8;
@@ -483,12 +483,11 @@ async function calculateRoute() {
     let speedKmH = 4.0;
     try {
       const parsed = JSON.parse(userJson);
-      if (parsed.speed) speedKmH = parseFloat(parsed.speed);
-      else if (parsed.max_speed) speedKmH = parseFloat(parsed.max_speed);
-      else if (PROFILE_PRESETS[currentPreset]?.speed) speedKmH = PROFILE_PRESETS[currentPreset].speed;
+      if (parsed.max_speed) speedKmH = parseFloat(parsed.max_speed);
+      else if (PROFILE_PRESETS[currentPreset]?.max_speed) speedKmH = PROFILE_PRESETS[currentPreset].max_speed;
       else speedKmH = currentPreset === 'crutches' ? 3.0 : (currentPreset === 'blind' || currentPreset === 'wheelchair' ? 3.5 : 4.0);
     } catch {
-      speedKmH = PROFILE_PRESETS[currentPreset]?.speed || 4.0;
+      speedKmH = PROFILE_PRESETS[currentPreset]?.max_speed || 4.0;
     }
     let estMinutes = Math.round((totalMeters / 1000) / speedKmH * 60);
     if (estMinutes < 1) estMinutes = 1;
@@ -546,7 +545,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // Toggle switch listeners
-  document.getElementById('ctrl-allow-stairs').addEventListener('change', (e) => {
+  document.getElementById('ctrl-can-take-stairs').addEventListener('change', (e) => {
     document.getElementById('row-stairs-penalty').style.display = e.target.checked ? 'flex' : 'none';
     currentPreset = 'custom';
     document.querySelectorAll('.preset-chips .chip').forEach(c => c.classList.toggle('active', c.dataset.preset === 'custom'));

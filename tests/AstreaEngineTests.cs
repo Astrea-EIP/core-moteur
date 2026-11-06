@@ -220,16 +220,16 @@ namespace AstreaEngineTests
         {
             var json = JsonNode.Parse(@"
             {
-                ""stairs"": false,
+                ""can_take_stairs"": false,
                 ""avoid_slopes"": true,
                 ""max_slope"": 6.0,
-                ""wheels"": true,
-                ""blind"": true,
+                ""has_wheels"": true,
+                ""blindness"": true,
                 ""dimensions"": {
                     ""width"": 0.85,
                     ""length"": 1.2
                 },
-                ""speed"": 2.8,
+                ""max_speed"": 2.8,
                 ""distance_influence"": 90
             }");
 
@@ -249,7 +249,7 @@ namespace AstreaEngineTests
         [Fact]
         public void UserProfile_Parse_FlexibleBooleanFormats()
         {
-            var json = JsonNode.Parse("{\"wheels\": \"yes\", \"avoid_stairs\": \"1\", \"slope\": \"no\"}");
+            var json = JsonNode.Parse("{\"has_wheels\": \"yes\", \"can_take_stairs\": \"no\", \"avoid_slopes\": \"1\"}");
             var profile = UserProfile.Parse(json);
 
             Assert.True(profile.HasWheels);
@@ -426,7 +426,7 @@ namespace AstreaEngineTests
         [Fact]
         public void UserProfile_Parse_RetainsExtraProperties()
         {
-            var json = JsonNode.Parse("{\"profile\": \"wheelchair\", \"custom_tag\": \"preferred\", \"level\": 42}");
+            var json = JsonNode.Parse("{\"profile\": \"wheelchair\", \"custom_tag\": \"preferred\", \"level\": 42, \"allow_stairs\": false}");
             var profile = UserProfile.Parse(json);
 
             Assert.True(profile.HasWheels);
@@ -434,6 +434,8 @@ namespace AstreaEngineTests
             Assert.Equal("preferred", profile.ExtraProperties["custom_tag"]?.ToString());
             Assert.True(profile.ExtraProperties.ContainsKey("level"));
             Assert.Equal("42", profile.ExtraProperties["level"]?.ToString());
+            Assert.True(profile.ExtraProperties.ContainsKey("allow_stairs"));
+            Assert.Equal("false", profile.ExtraProperties["allow_stairs"]?.ToString());
         }
 
         [Fact]
@@ -691,7 +693,7 @@ namespace AstreaEngineTests
         [Fact]
         public void UserProfile_Parse_CaseInsensitivePropertyNames()
         {
-            var json = JsonNode.Parse("{\"ALLOW_STAIRS\": false, \"WHEELS\": \"YES\", \"MAX_SLOPE\": \"9.5\"}");
+            var json = JsonNode.Parse("{\"CAN_TAKE_STAIRS\": false, \"HAS_WHEELS\": \"YES\", \"MAX_SLOPE\": \"9.5\"}");
             var profile = UserProfile.Parse(json);
 
             Assert.False(profile.CanTakeStairs);
@@ -703,7 +705,7 @@ namespace AstreaEngineTests
         [Fact]
         public void UserProfile_Parse_StringNumberConversions()
         {
-            var json = JsonNode.Parse("{\"width\": \"0.85\", \"distance_influence\": \"85\", \"speed\": \"3.2\"}");
+            var json = JsonNode.Parse("{\"width\": \"0.85\", \"distance_influence\": \"85\", \"max_speed\": \"3.2\"}");
             var profile = UserProfile.Parse(json);
 
             Assert.Equal(0.85, profile.Width);
@@ -722,9 +724,9 @@ namespace AstreaEngineTests
         }
 
         [Fact]
-        public void UserProfile_Parse_NumericSlopeSetsMaxSlopeAndAvoidSlopes()
+        public void UserProfile_Parse_MaxSlopeSetsMaxSlopeAndAvoidSlopes()
         {
-            var json = JsonNode.Parse("{\"slope\": 7.5}");
+            var json = JsonNode.Parse("{\"max_slope\": 7.5}");
             var profile = UserProfile.Parse(json);
 
             Assert.Equal(7.5, profile.MaxSlope);
