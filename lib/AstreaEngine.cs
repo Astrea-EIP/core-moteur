@@ -37,21 +37,23 @@ namespace AstreaEngine
         /// <summary>
         /// Route request.
         /// Points: List of PointResponse objects with lat and lng coordinates.
-        /// UserJson: JSON object describing the person, e.g. {"profile":"disabled","locale":"fr"}
+        /// UserJson: JSON object describing the person, e.g. {"profile":"wheelchair"}
+        /// Locale: Language code for navigation instructions (defaults to "fr").
         /// Returns a list of PointResponse objects.
         /// </summary>
         /// <param name="host">The host to call the route endpoint on.</param>
         /// <param name="points">List of geographic points with latitude and longitude.</param>
         /// <param name="userJson">JSON string describing the user.</param>
+        /// <param name="locale">Language code for instructions (e.g. "fr", "en"). Defaults to "fr".</param>
         /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
-        public static async Task<List<PointResponse>> AstreaRouteAsync(string host, List<PointResponse> points, string userJson)
+        public static async Task<List<PointResponse>> AstreaRouteAsync(string host, List<PointResponse> points, string userJson, string locale = "fr")
         {
             // Convert PointResponse objects to string format expected by Routes.RouteAsync
             var pointStrings = points?.
                 Select(p => $"{p.Lat.ToString(CultureInfo.InvariantCulture)},{p.Lng.ToString(CultureInfo.InvariantCulture)}")
                 .ToList() ?? new List<string>();
 
-            return await Routes.RouteAsync(host, pointStrings, userJson);
+            return await Routes.RouteAsync(host, pointStrings, userJson, locale);
         }
 
         /// <summary>
@@ -72,10 +74,11 @@ namespace AstreaEngine
         /// <param name="host">The host to call the route endpoint on.</param>
         /// <param name="points">List of geographic points with latitude and longitude.</param>
         /// <param name="userJson">JSON string describing the user.</param>
+        /// <param name="locale">Language code for instructions (e.g. "fr", "en"). Defaults to "fr".</param>
         /// <returns>A list of PointResponse objects representing the route.</returns>
-        public static List<PointResponse> AstreaRoute(string host, List<PointResponse> points, string userJson)
+        public static List<PointResponse> AstreaRoute(string host, List<PointResponse> points, string userJson, string locale = "fr")
         {
-            return AstreaRouteAsync(host, points, userJson).GetAwaiter().GetResult();
+            return AstreaRouteAsync(host, points, userJson, locale).GetAwaiter().GetResult();
         }
 
         /// <summary>
