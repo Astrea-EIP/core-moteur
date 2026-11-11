@@ -145,7 +145,7 @@ namespace AstreaEngine
         private static readonly HashSet<string> KnownPropertyNames = new(StringComparer.OrdinalIgnoreCase)
         {
             "profile", "preset", "name",
-            "can_take_stairs", "stairs_penalty",
+            "avoid_stairs", "stairs_penalty",
             "max_slope", "avoid_slopes",
             "has_wheels",
             "blindness",

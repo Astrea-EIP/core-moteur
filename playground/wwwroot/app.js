@@ -23,7 +23,7 @@ const PRESETS = {
 const PROFILE_PRESETS = {
   wheelchair: {
     profile: "wheelchair",
-    can_take_stairs: false,
+    avoid_stairs: false,
     avoid_slopes: true,
     max_slope: 8.0,
     has_wheels: true,
@@ -34,7 +34,7 @@ const PROFILE_PRESETS = {
   },
   blind: {
     profile: "blind",
-    can_take_stairs: true,
+    avoid_stairs: true,
     avoid_slopes: false,
     has_wheels: false,
     blindness: true,
@@ -44,7 +44,7 @@ const PROFILE_PRESETS = {
   },
   crutches: {
     profile: "crutches",
-    can_take_stairs: true,
+    avoid_stairs: true,
     stairs_penalty: 0.4,
     avoid_slopes: true,
     max_slope: 10.0,
@@ -56,7 +56,7 @@ const PROFILE_PRESETS = {
   },
   walking: {
     profile: "walking",
-    can_take_stairs: true,
+    avoid_stairs: false,
     avoid_slopes: false,
     has_wheels: false,
     blindness: false,
@@ -246,9 +246,9 @@ function getUiState() {
   };
 
   if (!allowStairs) {
-    state.can_take_stairs = false;
+    state.avoid_stairs = true;
   } else {
-    state.can_take_stairs = true;
+    state.avoid_stairs = false;
     if (stairsPenalty < 1.0) {
       state.stairs_penalty = stairsPenalty;
     }
@@ -283,7 +283,7 @@ function updateUiFromState(obj) {
       c.classList.toggle('active', c.dataset.preset === currentPreset);
     });
 
-    const allowStairs = data.can_take_stairs !== undefined ? Boolean(data.can_take_stairs) : true;
+    const allowStairs = data.avoid_stairs !== undefined ? !Boolean(data.avoid_stairs) : true;
     document.getElementById('ctrl-can-take-stairs').checked = allowStairs;
 
     const penaltyVal = data.stairs_penalty !== undefined ? parseFloat(data.stairs_penalty) : 0.3;
