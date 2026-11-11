@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Globalization;
@@ -411,7 +411,7 @@ namespace AstreaEngineTests
         public void UserProfile_Parse_ThrowsOnUnknownProperty()
         {
             var json = JsonNode.Parse("{\"profile\": \"wheelchair\", \"custom_tag\": \"preferred\"}");
-            var ex = Assert.Throws<ArgumentException>(() => UserProfile.Parse(json));
+            var ex = Assert.Throws<ProfileValidationException>(() => UserProfile.Parse(json));
             Assert.Contains("Unknown property 'custom_tag'", ex.Message);
         }
 
@@ -708,6 +708,46 @@ namespace AstreaEngineTests
 
             Assert.Equal(7.5, profile.MaxSlope);
             Assert.True(profile.AvoidSlopes);
+        }
+    }
+
+    public class LocaleParameterUnitTests
+    {
+        [Fact]
+        public async Task AstreaRouteAsync_AcceptsCustomLocaleParameter()
+        {
+            var points = new List<PointResponse>();
+
+            // Validation occurs before HTTP call, proving signature and invocation pass correctly
+            var exception = await Assert.ThrowsAsync<ValidationException>(async () =>
+            {
+                await AstreaEngine.AstreaEngine.AstreaRouteAsync(
+                    "http://localhost:8989",
+                    points,
+                    "{\"profile\":\"foot\"}",
+                    locale: "en"
+                );
+            });
+
+            Assert.Contains("at least 2 points", exception.Message, StringComparison.OrdinalIgnoreCase);
+        }
+
+        [Fact]
+        public void AstreaRoute_AcceptsCustomLocaleParameter()
+        {
+            var points = new List<PointResponse>();
+
+            var exception = Assert.Throws<ValidationException>(() =>
+            {
+                AstreaEngine.AstreaEngine.AstreaRoute(
+                    "http://localhost:8989",
+                    points,
+                    "{\"profile\":\"foot\"}",
+                    locale: "de"
+                );
+            });
+
+            Assert.Contains("at least 2 points", exception.Message, StringComparison.OrdinalIgnoreCase);
         }
     }
 }

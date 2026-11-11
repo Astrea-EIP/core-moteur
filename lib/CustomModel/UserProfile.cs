@@ -108,6 +108,7 @@ namespace AstreaEngine
             if (json is JsonValue val && val.TryGetValue<string>(out var singleProfileName))
             {
                 ApplyPreset(profile, singleProfileName);
+                ValidateBounds(profile);
                 return profile;
             }
 
@@ -128,6 +129,15 @@ namespace AstreaEngine
                 {
                     mapping.Apply(dimsObj, profile);
                 }
+
+                foreach (var kvp in dimsObj)
+                {
+                    if (!string.Equals(kvp.Key, "width", StringComparison.OrdinalIgnoreCase) &&
+                        !string.Equals(kvp.Key, "length", StringComparison.OrdinalIgnoreCase))
+                    {
+                        throw new ProfileValidationException($"Unknown property '{kvp.Key}' in user profile dimensions JSON.");
+                    }
+                }
             }
 
             // Throw exception if there are any unknown properties in the JSON that are not part of the known property names
@@ -135,11 +145,52 @@ namespace AstreaEngine
             {
                 if (!KnownPropertyNames.Contains(kvp.Key))
                 {
-                    throw new ArgumentException($"Unknown property '{kvp.Key}' in user profile JSON.");
+                    throw new ProfileValidationException($"Unknown property '{kvp.Key}' in user profile JSON.");
                 }
             }
 
+            ValidateBounds(profile);
+
             return profile;
+        }
+
+        private static void ValidateBounds(UserProfile profile)
+        {
+            if (profile.MaxSpeed.HasValue && (profile.MaxSpeed.Value <= 0 || profile.MaxSpeed.Value > 50))
+            {
+                throw new ProfileValidationException(
+                    $"max_speed must be strictly positive and at most 50 km/h (got {profile.MaxSpeed.Value.ToString(CultureInfo.InvariantCulture)}).");
+            }
+
+            if (profile.MaxSlope.HasValue && (profile.MaxSlope.Value <= 0 || profile.MaxSlope.Value > 100))
+            {
+                throw new ProfileValidationException(
+                    $"max_slope must be strictly positive and at most 100% (got {profile.MaxSlope.Value.ToString(CultureInfo.InvariantCulture)}).");
+            }
+
+            if (profile.StairsPenalty.HasValue && (profile.StairsPenalty.Value < 0.0 || profile.StairsPenalty.Value > 1.0))
+            {
+                throw new ProfileValidationException(
+                    $"stairs_penalty must be between 0.0 and 1.0 (got {profile.StairsPenalty.Value.ToString(CultureInfo.InvariantCulture)}).");
+            }
+
+            if (profile.DistanceInfluence.HasValue && (profile.DistanceInfluence.Value < 0 || profile.DistanceInfluence.Value > 200))
+            {
+                throw new ProfileValidationException(
+                    $"distance_influence must be between 0 and 200 (got {profile.DistanceInfluence.Value}).");
+            }
+
+            if (profile.Width.HasValue && (profile.Width.Value <= 0 || profile.Width.Value > 10))
+            {
+                throw new ProfileValidationException(
+                    $"width must be strictly positive and at most 10 meters (got {profile.Width.Value.ToString(CultureInfo.InvariantCulture)}).");
+            }
+
+            if (profile.Length.HasValue && (profile.Length.Value <= 0 || profile.Length.Value > 10))
+            {
+                throw new ProfileValidationException(
+                    $"length must be strictly positive and at most 10 meters (got {profile.Length.Value.ToString(CultureInfo.InvariantCulture)}).");
+            }
         }
 
         private static readonly HashSet<string> KnownPropertyNames = new(StringComparer.OrdinalIgnoreCase)

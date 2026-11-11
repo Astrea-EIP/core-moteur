@@ -1,4 +1,4 @@
-// <copyright file="Routes.cs" company="Astrea">
+﻿// <copyright file="Routes.cs" company="Astrea">
 // Copyright (c) Astrea. All rights reserved.
 // </copyright>
 
@@ -63,7 +63,7 @@ namespace AstreaEngine
             }
         }
 
-        public static async Task<List<PointResponse>> RouteAsync(string host, List<string> points, string userJson)
+        public static async Task<List<PointResponse>> RouteAsync(string host, List<string> points, string userJson, string locale = "fr")
         {
             if (points.Count < 2)
             {
@@ -110,16 +110,18 @@ namespace AstreaEngine
                 throw new ValidationException("At least 2 valid points are required for routing.");
             }
 
+            var resolvedLocale = string.IsNullOrWhiteSpace(locale) ? "fr" : locale;
+
             var jsonBody = new JsonObject
             {
                 { "points", pointsArray },
-                { "locale", "fr" }, // ! Hardcoded value, should be in the user JSON
+                { "locale", resolvedLocale },
                 { "points_encoded", false },
             };
 
-            // Construction of the user profile and custom model based on the user JSON
-            // If user is null, use default profile (no accessibility features)
-            // If user is not null, build a custom model based on the user profile and preferences
+            // Construction of the user profile and custom model based on the user JSON.
+            // When user is null, default to standard pedestrian routing ("foot") with Contraction Hierarchies enabled.
+            // When user is provided, BuildCustomModel applies custom speed and priority rules on top of the "foot" base profile.
             if (user == null)
             {
                 jsonBody["profile"] = "foot";

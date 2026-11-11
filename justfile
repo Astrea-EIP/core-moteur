@@ -85,5 +85,15 @@ clean-test:
 
 # Run the interactive web playground to test routing with custom userJson
 playground:
-    open "http://localhost:5050"
+    #!/usr/bin/env bash
+    URL="http://localhost:5050"
+    if command -v xdg-open > /dev/null 2>&1; then
+        (sleep 1 && xdg-open "$URL") &
+    elif command -v open > /dev/null 2>&1; then
+        (sleep 1 && open "$URL") &
+    elif [ -n "${COMSPEC:-}" ] || command -v cmd.exe > /dev/null 2>&1; then
+        (sleep 1 && cmd.exe /c start "$URL") &
+    else
+        echo "Playground server starting. Open $URL in your browser."
+    fi
     cd playground && dotnet run

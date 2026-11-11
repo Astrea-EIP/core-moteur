@@ -21,6 +21,10 @@ namespace AstreaEngine.Features
                 return;
             }
 
+            // Note: In GraphHopper custom models, matching multiply_by rules stack multiplicatively
+            // without a ceiling (e.g. footway == SIDEWALK (1.4) * surface == PAVED (1.3) = 1.82).
+            // This deliberately favors well-tagged infrastructure over under-tagged or generic segments.
+
             // Protected pedestrian infrastructure
             builder.AddPriorityRule("footway == SIDEWALK", 1.4);
             builder.AddPriorityRule("footway == CROSSING", 1.2);
