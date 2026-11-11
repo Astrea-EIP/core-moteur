@@ -51,7 +51,7 @@ namespace AstreaEngine
             Map("preset", (profile, v) => ApplyPreset(profile, v), TryGetString),
             Map("name", (profile, v) => ApplyPreset(profile, v), TryGetString),
 
-            Map("can_take_stairs", (profile, v) => profile.CanTakeStairs = v, TryGetBoolean),
+            Map("avoid_stairs", (profile, v) => profile.CanTakeStairs = !v, TryGetBoolean),
             Map("stairs_penalty", (profile, v) => profile.StairsPenalty = v, TryGetDouble),
             Map("max_slope", (profile, v) => { profile.MaxSlope = v; profile.AvoidSlopes = true; }, TryGetDouble),
             Map("avoid_slopes", (profile, v) => profile.AvoidSlopes = v, TryGetBoolean),
