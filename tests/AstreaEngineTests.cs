@@ -17,14 +17,12 @@ namespace AstreaEngineTests
         public String GraphhopperUrl = "http://localhost:8989";
 
         [Fact]
+        [Trait("Category", "Integration")]
         public void TestDockerUp()
         {
             var healthCheck = AstreaEngine.AstreaEngine.AstreaHealth(GraphhopperUrl);
             Assert.NotNull(healthCheck);
-            Assert.True(
-                healthCheck.Contains("\"status\":\"OK\"", StringComparison.OrdinalIgnoreCase) ||
-                healthCheck.Contains("\"error\":", StringComparison.OrdinalIgnoreCase),
-                $"Unexpected health check response: {healthCheck}");
+            Assert.Contains("\"status\":\"OK\"", healthCheck, StringComparison.OrdinalIgnoreCase);
         }
 
         [Fact]
@@ -65,6 +63,7 @@ namespace AstreaEngineTests
         }
 
         [Fact]
+        [Trait("Category", "Integration")]
         public async Task TestAstreaRouteAsyncWithCustomModel()
         {
             var points = new List<PointResponse>
@@ -73,21 +72,15 @@ namespace AstreaEngineTests
                 new PointResponse { Lat = 47.22, Lng = -1.54 }
             };
 
-            try
-            {
-                var result = await AstreaEngine.AstreaEngine.AstreaRouteAsync(
-                    GraphhopperUrl,
-                    points,
-                    "{\"profile\":\"wheelchair\"}"
-                );
+            var result = await AstreaEngine.AstreaEngine.AstreaRouteAsync(
+                GraphhopperUrl,
+                points,
+                "{\"profile\":\"wheelchair\"}"
+            );
 
-                Assert.NotNull(result);
-                Assert.IsType<List<PointResponse>>(result);
-            }
-            catch (InvalidOperationException ex)
-            {
-                Assert.Contains("error", ex.Message, StringComparison.OrdinalIgnoreCase);
-            }
+            Assert.NotNull(result);
+            Assert.IsType<List<PointResponse>>(result);
+            Assert.NotEmpty(result);
         }
 
         [Fact]
@@ -124,6 +117,7 @@ namespace AstreaEngineTests
         }
 
         [Fact]
+        [Trait("Category", "Integration")]
         public async Task TestAstreaRouteAsyncWithNullOrEmptyUserJsonDoesNotThrowValidationException()
         {
             var points = new List<PointResponse>
@@ -132,19 +126,9 @@ namespace AstreaEngineTests
                 new PointResponse { Lat = 47.22, Lng = -1.54 }
             };
 
-            // Should proceed past validation without throwing ValidationException("Invalid user JSON")
-            try
-            {
-                await AstreaEngine.AstreaEngine.AstreaRouteAsync(GraphhopperUrl, points, "");
-            }
-            catch (ValidationException ex)
-            {
-                Assert.Fail($"ValidationException was unexpectedly thrown: {ex.Message}");
-            }
-            catch
-            {
-                // Network or mock error is expected if GraphHopper is offline, but NOT ValidationException
-            }
+            var result = await AstreaEngine.AstreaEngine.AstreaRouteAsync(GraphhopperUrl, points, "");
+            Assert.NotNull(result);
+            Assert.NotEmpty(result);
         }
     }
 
@@ -206,7 +190,7 @@ namespace AstreaEngineTests
         [Fact]
         public void UserProfile_Parse_PresetWithGranularOverrides()
         {
-            var json = JsonNode.Parse("{\"profile\": \"wheelchair\", \"can_take_stairs\": true, \"width\": 0.75}");
+            var json = JsonNode.Parse("{\"profile\": \"wheelchair\", \"avoid_stairs\": false, \"width\": 0.75}");
             var profile = UserProfile.Parse(json);
 
             Assert.True(profile.HasWheels);
@@ -220,7 +204,7 @@ namespace AstreaEngineTests
         {
             var json = JsonNode.Parse(@"
             {
-                ""can_take_stairs"": false,
+                ""avoid_stairs"": true,
                 ""avoid_slopes"": true,
                 ""max_slope"": 6.0,
                 ""has_wheels"": true,
@@ -249,7 +233,7 @@ namespace AstreaEngineTests
         [Fact]
         public void UserProfile_Parse_FlexibleBooleanFormats()
         {
-            var json = JsonNode.Parse("{\"has_wheels\": \"yes\", \"can_take_stairs\": \"no\", \"avoid_slopes\": \"1\"}");
+            var json = JsonNode.Parse("{\"has_wheels\": \"yes\", \"avoid_stairs\": \"yes\", \"avoid_slopes\": \"1\"}");
             var profile = UserProfile.Parse(json);
 
             Assert.True(profile.HasWheels);
@@ -686,7 +670,7 @@ namespace AstreaEngineTests
         [Fact]
         public void UserProfile_Parse_CaseInsensitivePropertyNames()
         {
-            var json = JsonNode.Parse("{\"CAN_TAKE_STAIRS\": false, \"HAS_WHEELS\": \"YES\", \"MAX_SLOPE\": \"9.5\"}");
+            var json = JsonNode.Parse("{\"AVOID_STAIRS\": true, \"HAS_WHEELS\": \"YES\", \"MAX_SLOPE\": \"9.5\"}");
             var profile = UserProfile.Parse(json);
 
             Assert.False(profile.CanTakeStairs);

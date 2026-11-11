@@ -46,6 +46,39 @@ test-lib:
     cd lib && dotnet build
     cd tests && dotnet test
 
+# Run unit tests only (no GraphHopper container needed)
+test-unit:
+    cd lib && dotnet build
+    cd tests && dotnet test --filter "Category!=Integration"
+
+# Run integration tests only (requires GraphHopper)
+test-integration:
+    cd lib && dotnet build
+    cd tests && dotnet test --filter "Category=Integration"
+
+# Run lightweight GraphHopper for integration tests (Nantes extract)
+run-test-gh: check
+    #!/usr/bin/env bash
+    set -euo pipefail
+    docker compose -f docker-compose.test.yml up -d
+    echo "Waiting for GraphHopper to be ready..."
+    timeout=60
+    while [ $timeout -gt 0 ]; do
+        if curl -s http://localhost:8989/health | grep -q 'OK'; then
+            echo "GraphHopper is ready at http://localhost:8989"
+            exit 0
+        fi
+        sleep 1
+        timeout=$((timeout - 1))
+    done
+    echo "Error: GraphHopper timed out after 60s"
+    docker compose -f docker-compose.test.yml logs graphhopper
+    exit 1
+
+# Stop lightweight GraphHopper test container
+stop-test-gh: check
+    docker compose -f docker-compose.test.yml down
+
 # Clean test artifacts
 clean-test:
     cd tests && dotnet clean && rm -rf bin obj
