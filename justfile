@@ -46,6 +46,54 @@ test-lib:
     cd lib && dotnet build
     cd tests && dotnet test
 
+# Run unit tests only (no GraphHopper container needed)
+test-unit:
+    cd lib && dotnet build
+    cd tests && dotnet test --filter "Category!=Integration"
+
+# Run integration tests only (requires GraphHopper)
+test-integration:
+    cd lib && dotnet build
+    cd tests && dotnet test --filter "Category=Integration"
+
+# Run lightweight GraphHopper for integration tests (Nantes extract)
+run-test-gh: check
+    #!/usr/bin/env bash
+    set -euo pipefail
+    docker compose -f docker-compose.test.yml up -d
+    echo "Waiting for GraphHopper to be ready..."
+    timeout=60
+    while [ $timeout -gt 0 ]; do
+        if curl -s http://localhost:8989/health | grep -q 'OK'; then
+            echo "GraphHopper is ready at http://localhost:8989"
+            exit 0
+        fi
+        sleep 1
+        timeout=$((timeout - 1))
+    done
+    echo "Error: GraphHopper timed out after 60s"
+    docker compose -f docker-compose.test.yml logs graphhopper
+    exit 1
+
+# Stop lightweight GraphHopper test container
+stop-test-gh: check
+    docker compose -f docker-compose.test.yml down
+
 # Clean test artifacts
 clean-test:
     cd tests && dotnet clean && rm -rf bin obj
+
+# Run the interactive web playground to test routing with custom userJson
+playground:
+    #!/usr/bin/env bash
+    URL="http://localhost:5050"
+    if command -v xdg-open > /dev/null 2>&1; then
+        (sleep 1 && xdg-open "$URL") &
+    elif command -v open > /dev/null 2>&1; then
+        (sleep 1 && open "$URL") &
+    elif [ -n "${COMSPEC:-}" ] || command -v cmd.exe > /dev/null 2>&1; then
+        (sleep 1 && cmd.exe /c start "$URL") &
+    else
+        echo "Playground server starting. Open $URL in your browser."
+    fi
+    cd playground && dotnet run

@@ -1,0 +1,15 @@
+services:
+  graphhopper:
+    build:
+      context: graphhopper
+      dockerfile: Dockerfile
+    container_name: graphhopper-test
+    environment:
+      - JAVA_OPTS=-Xmx2g -Xms512m
+    volumes:
+      - ./tests/fixtures/nantes-extract.osm.pbf:/data/map.osm.pbf:ro
+      - ./graphhopper/config.yml:/config.yml:ro
+      - ./graphhopper/custom_models:/data/custom_models:ro
+    command: ["/config.yml"]
+    ports:
+      - "8989:8989"
