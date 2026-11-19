@@ -1,0 +1,8 @@
+# Published image: the engine image plus the graph built by the publish workflow.
+# Build context: a directory containing `graph/` (output of the GraphHopper `import` command).
+ARG ENGINE_IMAGE=graphhopper-engine
+FROM ${ENGINE_IMAGE}
+
+# Written to the container layer, which stays writable: GraphHopper needs to create gh.lock
+# in the graph folder, so the graph must not be mounted read-only or hidden by a volume.
+COPY graph/ /data/graphhopper/
