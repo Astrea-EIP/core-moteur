@@ -10,9 +10,15 @@ permissions:
   contents: read
   packages: write
 
+env:
+  IMAGE: ghcr.io/astrea-eip/graphhopper
+  OSM_URL: https://download.geofabrik.de/europe/france/pays-de-la-loire-latest.osm.pbf
+  OSM_EXTRACT: pays-de-la-loire
+
 jobs:
   publish:
     runs-on: ubuntu-latest
+    timeout-minutes: 90
     if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
 
     steps:
@@ -32,8 +38,14 @@ jobs:
             echo "skip=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
+          GH_VERSION=$(sed -nE 's/.*--branch ([0-9][0-9.]*) .*/\1/p' graphhopper/Dockerfile | head -n1)
+          if [ -z "$GH_VERSION" ]; then
+            echo "Could not read the GraphHopper version from graphhopper/Dockerfile." >&2
+            exit 1
+          fi
           echo "skip=false" >> "$GITHUB_OUTPUT"
           echo "version=${TAG}" >> "$GITHUB_OUTPUT"
+          echo "graphhopper_version=${GH_VERSION}" >> "$GITHUB_OUTPUT"
 
       - name: Log in to GHCR
         if: steps.meta.outputs.skip != 'true'
@@ -43,12 +55,97 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and push image
+      - name: Build engine image
         if: steps.meta.outputs.skip != 'true'
-        uses: docker/build-push-action@v7
+        run: docker build -t graphhopper-engine graphhopper
+
+      - name: Download OSM extract and verify its MD5
+        if: steps.meta.outputs.skip != 'true'
+        id: osm
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p work/osm
+          curl -fSL --retry 3 -D osm-headers.txt -o work/osm/map.osm.pbf "$OSM_URL"
+          curl -fSL --retry 3 -o osm.md5 "${OSM_URL}.md5"
+          EXPECTED=$(cut -d' ' -f1 osm.md5)
+          ACTUAL=$(md5sum work/osm/map.osm.pbf | cut -d' ' -f1)
+          if [ "$EXPECTED" != "$ACTUAL" ]; then
+            echo "MD5 mismatch for the OSM extract: expected ${EXPECTED}, got ${ACTUAL}." >&2
+            echo "Geofabrik may have refreshed the file during the download: re-run the workflow." >&2
+            exit 1
+          fi
+          DATE=$(grep -i '^last-modified:' osm-headers.txt | tail -n1 | cut -d' ' -f2- | tr -d '\r')
+          echo "md5=${ACTUAL}" >> "$GITHUB_OUTPUT"
+          echo "date=${DATE}" >> "$GITHUB_OUTPUT"
+
+      - name: Cache SRTM elevation tiles
+        if: steps.meta.outputs.skip != 'true'
+        uses: actions/cache@v6
         with:
-          context: graphhopper
-          push: true
-          tags: |
-            ghcr.io/astrea-eip/graphhopper:${{ steps.meta.outputs.version }}
-            ghcr.io/astrea-eip/graphhopper:latest
+          path: work/srtm_cache
+          key: srtm-${{ env.OSM_EXTRACT }}
+
+      - name: Import the graph
+        if: steps.meta.outputs.skip != 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p work/graph work/srtm_cache
+          docker run --rm \
+            -e JAVA_OPTS="-Xmx2g" \
+            -v "$PWD/work/osm/map.osm.pbf:/data/map.osm.pbf:ro" \
+            -v "$PWD/work/graph:/data/graphhopper" \
+            -v "$PWD/work/srtm_cache:/data/srtm_cache" \
+            --entrypoint sh \
+            graphhopper-engine \
+            -c 'exec java $JAVA_OPTS -jar /graphhopper-web.jar import /config.yml'
+          # No graph, no image.
+          test -n "$(ls -A work/graph)" || { echo "The import produced an empty graph." >&2; exit 1; }
+          rm -rf work/graph/gh.lock
+
+      - name: Build image with the graph
+        if: steps.meta.outputs.skip != 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker build \
+            -f graphhopper/Dockerfile.graph \
+            --build-arg ENGINE_IMAGE=graphhopper-engine \
+            --label "org.opencontainers.image.source=https://github.com/${GITHUB_REPOSITORY}" \
+            --label "org.opencontainers.image.version=${{ steps.meta.outputs.version }}" \
+            --label "org.opencontainers.image.revision=$(git rev-parse HEAD)" \
+            --label "org.opencontainers.image.created=$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            --label "eu.astrea.core-moteur.tag=${{ steps.meta.outputs.version }}" \
+            --label "eu.astrea.graphhopper.version=${{ steps.meta.outputs.graphhopper_version }}" \
+            --label "eu.astrea.osm.extract=${OSM_EXTRACT}" \
+            --label "eu.astrea.osm.extract.date=${{ steps.osm.outputs.date }}" \
+            --label "eu.astrea.osm.extract.md5=${{ steps.osm.outputs.md5 }}" \
+            -t "${IMAGE}:${{ steps.meta.outputs.version }}" \
+            -t "${IMAGE}:latest" \
+            work
+
+      - name: Smoke test (no mount, no OSM file, no import)
+        if: steps.meta.outputs.skip != 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run -d --name gh-smoke -p 8989:8989 "${IMAGE}:${{ steps.meta.outputs.version }}"
+          for i in $(seq 1 60); do
+            if curl -fs http://localhost:8989/health >/dev/null; then break; fi
+            sleep 2
+          done
+          curl -fs http://localhost:8989/health
+          # Nantes, a few hundred metres on foot.
+          curl -fs "http://localhost:8989/route?point=47.2184,-1.5536&point=47.2130,-1.5560&profile=foot" | grep -q '"paths"'
+        # The image has no .osm.pbf: if this passes, the graph really comes from the image.
+
+      - name: Smoke test logs
+        if: always() && steps.meta.outputs.skip != 'true'
+        run: docker logs gh-smoke || true
+
+      - name: Push image
+        if: steps.meta.outputs.skip != 'true'
+        run: |
+          docker push "${IMAGE}:${{ steps.meta.outputs.version }}"
+          docker push "${IMAGE}:latest"
