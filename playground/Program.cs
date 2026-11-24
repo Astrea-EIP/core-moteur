@@ -1,4 +1,4 @@
-﻿using System.Text.Json.Serialization;
+using System.Text.Json.Serialization;
 using AstreaEngine;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -28,8 +28,14 @@ app.MapPost("/api/route", async (RouteApiRequest req) =>
         return Results.Ok(new
         {
             success = true,
-            points = route,
-            count = route.Count
+            route = route,
+            points = route.Points,
+            count = route.Points.Count,
+            distance = route.Distance,
+            time = route.Time,
+            ascend = route.Ascend,
+            descend = route.Descend,
+            instructions = route.Instructions
         });
     }
     catch (Exception ex)

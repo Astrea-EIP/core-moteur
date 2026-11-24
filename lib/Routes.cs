@@ -16,9 +16,9 @@ namespace AstreaEngine
     /// </summary>
     public static class Routes
     {
-        private static List<PointResponse> parseJson(string json)
+        public static RouteResponse ParseJson(string json)
         {
-            var result = new List<PointResponse>();
+            var result = new RouteResponse();
 
             try
             {
@@ -26,19 +26,91 @@ namespace AstreaEngine
                 if (jsonNode?["paths"] is JsonArray paths && paths.Count > 0)
                 {
                     var path = paths[0];
-                    if (path?["points"]?["coordinates"] is JsonArray coordinates)
+                    if (path != null)
                     {
-                        foreach (var coord in coordinates)
+                        result.Distance = path["distance"]?.GetValue<double>() ?? 0;
+                        result.Time = path["time"]?.GetValue<long>() ?? 0;
+                        result.Ascend = path["ascend"]?.GetValue<double>() ?? 0;
+                        result.Descend = path["descend"]?.GetValue<double>() ?? 0;
+
+                        if (path["bbox"] is JsonArray bboxArray)
                         {
-                            if (coord is JsonArray point && point.Count >= 2 && point[0] != null && point[1] != null)
+                            var bbox = new List<double>();
+                            foreach (var item in bboxArray)
                             {
-                                result.Add(new PointResponse
+                                if (item != null)
                                 {
-                                    Lat = point[1]!.GetValue<double>(),
-                                    Lng = point[0]!.GetValue<double>(),
-                                });
+                                    bbox.Add(item.GetValue<double>());
+                                }
+                            }
+                            result.BBox = bbox.ToArray();
+                        }
+
+                        if (path["points"]?["coordinates"] is JsonArray coordinates)
+                        {
+                            foreach (var coord in coordinates)
+                            {
+                                if (coord is JsonArray point && point.Count >= 2 && point[0] != null && point[1] != null)
+                                {
+                                    var pt = new PointResponse
+                                    {
+                                        Lat = point[1]!.GetValue<double>(),
+                                        Lng = point[0]!.GetValue<double>(),
+                                    };
+
+                                    if (point.Count >= 3 && point[2] != null)
+                                    {
+                                        pt.Elevation = point[2]!.GetValue<double>();
+                                    }
+
+                                    result.Points.Add(pt);
+                                }
                             }
                         }
+
+                        if (path["instructions"] is JsonArray instructionsArray)
+                        {
+                            foreach (var instNode in instructionsArray)
+                            {
+                                if (instNode is JsonObject instObj)
+                                {
+                                    var instruction = new InstructionResponse
+                                    {
+                                        Text = instObj["text"]?.GetValue<string>() ?? string.Empty,
+                                        StreetName = instObj["street_name"]?.GetValue<string>() ?? string.Empty,
+                                        Distance = instObj["distance"]?.GetValue<double>() ?? 0,
+                                        Time = instObj["time"]?.GetValue<long>() ?? 0,
+                                        Sign = instObj["sign"]?.GetValue<int>() ?? 0,
+                                    };
+
+                                    if (instObj["interval"] is JsonArray intervalArr)
+                                    {
+                                        var intervals = new List<int>();
+                                        foreach (var i in intervalArr)
+                                        {
+                                            if (i != null)
+                                            {
+                                                intervals.Add(i.GetValue<int>());
+                                            }
+                                        }
+                                        instruction.Interval = intervals.ToArray();
+                                    }
+
+                                    if (instObj["heading"] != null)
+                                    {
+                                        instruction.Heading = instObj["heading"]!.GetValue<double>();
+                                    }
+
+                                    if (instObj["last_heading"] != null)
+                                    {
+                                        instruction.LastHeading = instObj["last_heading"]!.GetValue<double>();
+                                    }
+
+                                    result.Instructions.Add(instruction);
+                                }
+                            }
+                        }
+
                         return result;
                     }
                 }
@@ -63,7 +135,7 @@ namespace AstreaEngine
             }
         }
 
-        public static async Task<List<PointResponse>> RouteAsync(string host, List<string> points, string userJson, string locale = "fr")
+        public static async Task<RouteResponse> RouteAsync(string host, List<string> points, string userJson, string locale = "fr")
         {
             if (points.Count < 2)
             {
@@ -156,7 +228,7 @@ namespace AstreaEngine
                 // Not valid JSON or no error field, continue to parseJson
             }
 
-            return parseJson(responseJson);
+            return ParseJson(responseJson);
         }
 
         public static async Task<string> HealthAsync(string host)

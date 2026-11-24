@@ -1,7 +1,8 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -79,8 +80,8 @@ namespace AstreaEngineTests
             );
 
             Assert.NotNull(result);
-            Assert.IsType<List<PointResponse>>(result);
-            Assert.NotEmpty(result);
+            Assert.IsType<RouteResponse>(result);
+            Assert.NotEmpty(result.Points);
         }
 
         [Fact]
@@ -128,7 +129,8 @@ namespace AstreaEngineTests
 
             var result = await AstreaEngine.AstreaEngine.AstreaRouteAsync(GraphhopperUrl, points, "");
             Assert.NotNull(result);
-            Assert.NotEmpty(result);
+            Assert.IsType<RouteResponse>(result);
+            Assert.NotEmpty(result.Points);
         }
     }
 
@@ -748,6 +750,147 @@ namespace AstreaEngineTests
             });
 
             Assert.Contains("at least 2 points", exception.Message, StringComparison.OrdinalIgnoreCase);
+        }
+    }
+
+    public class RouteResponseParsingTests
+    {
+        [Fact]
+        public void ParseJson_ValidGraphHopperJson_ParsesAllFieldsCorrectly()
+        {
+            const string json = """
+            {
+                "paths": [
+                    {
+                        "distance": 850.4,
+                        "time": 680000,
+                        "ascend": 14.2,
+                        "descend": 6.8,
+                        "bbox": [-1.558, 47.214, -1.551, 47.219],
+                        "points": {
+                            "type": "LineString",
+                            "coordinates": [
+                                [-1.5536, 47.2172, 24.5],
+                                [-1.5539, 47.2175]
+                            ]
+                        },
+                        "instructions": [
+                            {
+                                "distance": 120.5,
+                                "time": 96400,
+                                "interval": [0, 1],
+                                "sign": 0,
+                                "text": "Continuer sur Rue de Strasbourg",
+                                "street_name": "Rue de Strasbourg",
+                                "heading": 84.5,
+                                "last_heading": 85.0
+                            },
+                            {
+                                "distance": 0.0,
+                                "time": 0,
+                                "interval": [1, 1],
+                                "sign": 4,
+                                "text": "Arrivée à destination",
+                                "street_name": ""
+                            }
+                        ]
+                    }
+                ]
+            }
+            """;
+
+            var result = Routes.ParseJson(json);
+
+            Assert.NotNull(result);
+            Assert.Equal(850.4, result.Distance);
+            Assert.Equal(680000, result.Time);
+            Assert.Equal(14.2, result.Ascend);
+            Assert.Equal(6.8, result.Descend);
+            Assert.NotNull(result.BBox);
+            Assert.Equal(4, result.BBox.Length);
+            Assert.Equal(-1.558, result.BBox[0]);
+            Assert.Equal(47.214, result.BBox[1]);
+            Assert.Equal(-1.551, result.BBox[2]);
+            Assert.Equal(47.219, result.BBox[3]);
+
+            Assert.Equal(2, result.Points.Count);
+            Assert.Equal(47.2172, result.Points[0].Lat);
+            Assert.Equal(-1.5536, result.Points[0].Lng);
+            Assert.Equal(24.5, result.Points[0].Elevation);
+
+            Assert.Equal(47.2175, result.Points[1].Lat);
+            Assert.Equal(-1.5539, result.Points[1].Lng);
+            Assert.Null(result.Points[1].Elevation);
+
+            Assert.Equal(2, result.Instructions.Count);
+            var firstInstruction = result.Instructions[0];
+            Assert.Equal("Continuer sur Rue de Strasbourg", firstInstruction.Text);
+            Assert.Equal("Rue de Strasbourg", firstInstruction.StreetName);
+            Assert.Equal(120.5, firstInstruction.Distance);
+            Assert.Equal(96400, firstInstruction.Time);
+            Assert.Equal(0, firstInstruction.Sign);
+            Assert.Equal(new[] { 0, 1 }, firstInstruction.Interval);
+            Assert.Equal(84.5, firstInstruction.Heading);
+            Assert.Equal(85.0, firstInstruction.LastHeading);
+
+            var secondInstruction = result.Instructions[1];
+            Assert.Equal("Arrivée à destination", secondInstruction.Text);
+            Assert.Equal(4, secondInstruction.Sign);
+            Assert.Null(secondInstruction.Heading);
+        }
+
+        [Fact]
+        public void ParseJson_GraphHopperErrorPayload_ThrowsInvalidDataException()
+        {
+            const string json = "{\"message\": \"Point 0 is out of bounds: 100.0, 200.0\"}";
+
+            var ex = Assert.Throws<InvalidDataException>(() => Routes.ParseJson(json));
+            Assert.Contains("GraphHopper error: Point 0 is out of bounds", ex.Message);
+        }
+
+        [Fact]
+        public void ParseJson_GraphHopperHintsErrorPayload_ThrowsInvalidDataException()
+        {
+            const string json = """
+            {
+                "hints": [
+                    {
+                        "message": "Cannot find point 0: 47.21, -1.55",
+                        "details": "com.graphhopper.util.exceptions.PointNotFoundException"
+                    }
+                ]
+            }
+            """;
+
+            var ex = Assert.Throws<InvalidDataException>(() => Routes.ParseJson(json));
+            Assert.Contains("GraphHopper error: Cannot find point 0: 47.21, -1.55", ex.Message);
+        }
+
+        [Fact]
+        public void ParseJson_GenericApiErrorPayload_ThrowsInvalidDataException()
+        {
+            const string json = "{\"error\": \"Internal Server Error\"}";
+
+            var ex = Assert.Throws<InvalidDataException>(() => Routes.ParseJson(json));
+            Assert.Contains("API error: Internal Server Error", ex.Message);
+        }
+
+        [Fact]
+        public void ParseJson_MissingPaths_ThrowsInvalidDataException()
+        {
+            const string json = "{\"paths\": []}";
+
+            var ex = Assert.Throws<InvalidDataException>(() => Routes.ParseJson(json));
+            Assert.Contains("JSON response does not contain expected route structure", ex.Message);
+        }
+
+        [Fact]
+        public void ParseJson_MalformedJson_ThrowsInvalidDataException()
+        {
+            const string json = "not valid json";
+
+            var ex = Assert.Throws<InvalidDataException>(() => Routes.ParseJson(json));
+            Assert.Contains("Failed to parse route response JSON", ex.Message);
         }
     }
 }
