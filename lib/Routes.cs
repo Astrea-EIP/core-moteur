@@ -1,4 +1,4 @@
-﻿// <copyright file="Routes.cs" company="Astrea">
+// <copyright file="Routes.cs" company="Astrea">
 // Copyright (c) Astrea. All rights reserved.
 // </copyright>
 
@@ -112,6 +112,15 @@ namespace AstreaEngine
                         }
 
                         return result;
+                    }
+                }
+
+                if (jsonNode?["hints"] is JsonArray hints && hints.Count > 0)
+                {
+                    var hintMsg = hints[0]?["message"]?.ToString();
+                    if (!string.IsNullOrWhiteSpace(hintMsg))
+                    {
+                        throw new InvalidDataException($"GraphHopper error: {hintMsg}");
                     }
                 }
 
