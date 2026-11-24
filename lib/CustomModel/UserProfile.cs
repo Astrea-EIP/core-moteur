@@ -1,0 +1,373 @@
+﻿// <copyright file="UserProfile.cs" company="Astrea">
+// Copyright (c) Astrea. All rights reserved.
+// </copyright>
+
+using System;
+using System.Collections.Generic;
+using System.Globalization;
+using System.Text.Json.Nodes;
+
+namespace AstreaEngine
+{
+    /// <summary>
+    /// Represents the user's accessibility profile, physical constraints, and navigation preferences.
+    /// </summary>
+    public class UserProfile
+    {
+        private delegate bool TryGetFunc<T>(JsonObject obj, string propertyName, out T value);
+
+        private interface IPropertyMapping
+        {
+            void Apply(JsonObject obj, UserProfile profile);
+        }
+
+        private sealed class PropertyMapping<T> : IPropertyMapping
+        {
+            public string PropertyName { get; }
+
+            public Action<UserProfile, T> Setter { get; }
+
+            public TryGetFunc<T> Getter { get; }
+
+            public PropertyMapping(string propertyName, Action<UserProfile, T> setter, TryGetFunc<T> getter)
+            {
+                PropertyName = propertyName;
+                Setter = setter;
+                Getter = getter;
+            }
+
+            public void Apply(JsonObject obj, UserProfile profile)
+            {
+                if (Getter(obj, PropertyName, out var value))
+                {
+                    Setter(profile, value);
+                }
+            }
+        }
+
+        private static readonly IPropertyMapping[] PropertyMappings =
+        {
+            Map("profile", (profile, v) => ApplyPreset(profile, v),TryGetString),
+            Map("preset", (profile, v) => ApplyPreset(profile, v), TryGetString),
+            Map("name", (profile, v) => ApplyPreset(profile, v), TryGetString),
+
+            Map("avoid_stairs", (profile, v) => profile.CanTakeStairs = !v, TryGetBoolean),
+            Map("stairs_penalty", (profile, v) => profile.StairsPenalty = v, TryGetDouble),
+            Map("max_slope", (profile, v) => { profile.MaxSlope = v; profile.AvoidSlopes = true; }, TryGetDouble),
+            Map("avoid_slopes", (profile, v) => profile.AvoidSlopes = v, TryGetBoolean),
+            Map("has_wheels", (profile, v) => profile.HasWheels = v, TryGetBoolean),
+            Map("blindness", (profile, v) => profile.Blindness = v, TryGetBoolean),
+            Map("width", (profile, v) => profile.Width = v, TryGetDouble),
+            Map("length", (profile, v) => profile.Length = v, TryGetDouble),
+            Map("max_speed", (profile, v) => profile.MaxSpeed = v, TryGetDouble),
+            Map("distance_influence", (profile, v) => profile.DistanceInfluence = v, TryGetInt),
+        };
+
+        public string? Preset { get; set; }
+
+        public bool CanTakeStairs { get; set; } = true;
+
+        public double? StairsPenalty { get; set; }
+
+        public bool AvoidSlopes { get; set; }
+
+        public double? MaxSlope { get; set; }
+
+        public bool HasWheels { get; set; }
+
+        public bool Blindness { get; set; }
+
+        public double? Width { get; set; }
+
+        public double? Length { get; set; }
+
+        public double? MaxSpeed { get; set; }
+
+        public int? DistanceInfluence { get; set; }
+
+        /// <summary>
+        /// Gets additional arbitrary properties passed by the backend.
+        /// </summary>
+        public Dictionary<string, object> ExtraProperties { get; } = new(StringComparer.OrdinalIgnoreCase);
+
+        /// <summary>
+        /// Parses a <see cref="JsonNode"/> representing the user profile JSON into a <see cref="UserProfile"/>.
+        /// Automatically applies defaults based on preset names and allows fine-grained overrides.
+        /// </summary>
+        /// <param name="json">The input JSON node.</param>
+        /// <returns>A populated <see cref="UserProfile"/> instance.</returns>
+        public static UserProfile Parse(JsonNode? json)
+        {
+            var profile = new UserProfile();
+
+            if (json == null)
+            {
+                return profile;
+            }
+
+            if (json is JsonValue val && val.TryGetValue<string>(out var singleProfileName))
+            {
+                ApplyPreset(profile, singleProfileName);
+                ValidateBounds(profile);
+                return profile;
+            }
+
+            if (json is not JsonObject obj)
+            {
+                return profile;
+            }
+
+            foreach (var mapping in PropertyMappings)
+            {
+                mapping.Apply(obj, profile);
+            }
+
+            // Check nested dimensions object if present e.g. "dimensions": { "width": 0.8, "length": 1.2 }
+            if (obj["dimensions"] is JsonObject dimsObj)
+            {
+                foreach (var mapping in PropertyMappings)
+                {
+                    mapping.Apply(dimsObj, profile);
+                }
+
+                foreach (var kvp in dimsObj)
+                {
+                    if (!string.Equals(kvp.Key, "width", StringComparison.OrdinalIgnoreCase) &&
+                        !string.Equals(kvp.Key, "length", StringComparison.OrdinalIgnoreCase))
+                    {
+                        throw new ProfileValidationException($"Unknown property '{kvp.Key}' in user profile dimensions JSON.");
+                    }
+                }
+            }
+
+            // Throw exception if there are any unknown properties in the JSON that are not part of the known property names
+            foreach (var kvp in obj)
+            {
+                if (!KnownPropertyNames.Contains(kvp.Key))
+                {
+                    throw new ProfileValidationException($"Unknown property '{kvp.Key}' in user profile JSON.");
+                }
+            }
+
+            ValidateBounds(profile);
+
+            return profile;
+        }
+
+        private static void ValidateBounds(UserProfile profile)
+        {
+            if (profile.MaxSpeed.HasValue && (profile.MaxSpeed.Value <= 0 || profile.MaxSpeed.Value > 50))
+            {
+                throw new ProfileValidationException(
+                    $"max_speed must be strictly positive and at most 50 km/h (got {profile.MaxSpeed.Value.ToString(CultureInfo.InvariantCulture)}).");
+            }
+
+            if (profile.MaxSlope.HasValue && (profile.MaxSlope.Value <= 0 || profile.MaxSlope.Value > 100))
+            {
+                throw new ProfileValidationException(
+                    $"max_slope must be strictly positive and at most 100% (got {profile.MaxSlope.Value.ToString(CultureInfo.InvariantCulture)}).");
+            }
+
+            if (profile.StairsPenalty.HasValue && (profile.StairsPenalty.Value < 0.0 || profile.StairsPenalty.Value > 1.0))
+            {
+                throw new ProfileValidationException(
+                    $"stairs_penalty must be between 0.0 and 1.0 (got {profile.StairsPenalty.Value.ToString(CultureInfo.InvariantCulture)}).");
+            }
+
+            if (profile.DistanceInfluence.HasValue && (profile.DistanceInfluence.Value < 0 || profile.DistanceInfluence.Value > 200))
+            {
+                throw new ProfileValidationException(
+                    $"distance_influence must be between 0 and 200 (got {profile.DistanceInfluence.Value}).");
+            }
+
+            if (profile.Width.HasValue && (profile.Width.Value <= 0 || profile.Width.Value > 10))
+            {
+                throw new ProfileValidationException(
+                    $"width must be strictly positive and at most 10 meters (got {profile.Width.Value.ToString(CultureInfo.InvariantCulture)}).");
+            }
+
+            if (profile.Length.HasValue && (profile.Length.Value <= 0 || profile.Length.Value > 10))
+            {
+                throw new ProfileValidationException(
+                    $"length must be strictly positive and at most 10 meters (got {profile.Length.Value.ToString(CultureInfo.InvariantCulture)}).");
+            }
+        }
+
+        private static readonly HashSet<string> KnownPropertyNames = new(StringComparer.OrdinalIgnoreCase)
+        {
+            "profile", "preset", "name",
+            "avoid_stairs", "stairs_penalty",
+            "max_slope", "avoid_slopes",
+            "has_wheels",
+            "blindness",
+            "width", "length",
+            "max_speed",
+            "distance_influence", "dimensions"
+        };
+
+        private static PropertyMapping<bool> Map(string propertyName, Action<UserProfile, bool> setter, TryGetFunc<bool> getter)
+            => new(propertyName, setter, getter);
+
+        private static PropertyMapping<double> Map(string propertyName, Action<UserProfile, double> setter, TryGetFunc<double> getter)
+            => new(propertyName, setter, getter);
+
+        private static PropertyMapping<int> Map(string propertyName, Action<UserProfile, int> setter, TryGetFunc<int> getter)
+            => new(propertyName, setter, getter);
+
+        private static PropertyMapping<string> Map(string propertyName, Action<UserProfile, string> setter, TryGetFunc<string> getter)
+            => new(propertyName, setter, getter);
+
+        private static void ApplyPreset(UserProfile profile, string preset)
+        {
+            var normalized = preset.Trim().ToLowerInvariant();
+            profile.Preset = normalized;
+
+            switch (normalized)
+            {
+                case "wheelchair":
+                    profile.HasWheels = true;
+                    profile.CanTakeStairs = false;
+                    profile.AvoidSlopes = true;
+                    profile.MaxSlope = 8.0;
+                    profile.Width = 0.9;
+                    profile.MaxSpeed = 3.5;
+                    profile.DistanceInfluence = 70;
+                    break;
+
+                case "blind":
+                    profile.Blindness = true;
+                    profile.CanTakeStairs = true;
+                    profile.HasWheels = false;
+                    profile.AvoidSlopes = false;
+                    profile.MaxSpeed = 3.5;
+                    profile.DistanceInfluence = 80;
+                    break;
+
+                case "crutches":
+                    profile.HasWheels = false;
+                    profile.CanTakeStairs = true;
+                    profile.StairsPenalty = 0.4;
+                    profile.AvoidSlopes = true;
+                    profile.MaxSlope = 10.0;
+                    profile.MaxSpeed = 3.0;
+                    profile.DistanceInfluence = 70;
+                    break;
+
+                case "walking":
+                case "foot":
+                    profile.HasWheels = false;
+                    profile.CanTakeStairs = true;
+                    profile.AvoidSlopes = false;
+                    profile.MaxSpeed = 5.0;
+                    profile.DistanceInfluence = 60;
+                    break;
+            }
+        }
+
+        private static JsonNode? GetProperty(JsonObject obj, string propertyName)
+        {
+            if (obj.TryGetPropertyValue(propertyName, out var direct))
+            {
+                return direct;
+            }
+
+            foreach (var kvp in obj)
+            {
+                if (string.Equals(kvp.Key, propertyName, StringComparison.OrdinalIgnoreCase))
+                {
+                    return kvp.Value;
+                }
+            }
+
+            return null;
+        }
+
+        private static bool TryGetBoolean(JsonObject obj, string propertyName, out bool result)
+        {
+            var node = GetProperty(obj, propertyName);
+            if (node is JsonValue val)
+            {
+                if (val.TryGetValue<bool>(out result))
+                {
+                    return true;
+                }
+
+                var str = val.ToString();
+                if (bool.TryParse(str, out result))
+                {
+                    return true;
+                }
+
+                if (string.Equals(str, "1", StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(str, "yes", StringComparison.OrdinalIgnoreCase))
+                {
+                    result = true;
+                    return true;
+                }
+
+                if (string.Equals(str, "0", StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(str, "no", StringComparison.OrdinalIgnoreCase))
+                {
+                    result = false;
+                    return true;
+                }
+            }
+
+            result = false;
+            return false;
+        }
+
+        private static bool TryGetDouble(JsonObject obj, string propertyName, out double result)
+        {
+            var node = GetProperty(obj, propertyName);
+            if (node is JsonValue val)
+            {
+                if (val.TryGetValue<double>(out result))
+                {
+                    return true;
+                }
+
+                if (double.TryParse(val.ToString(), NumberStyles.Float, CultureInfo.InvariantCulture, out result))
+                {
+                    return true;
+                }
+            }
+
+            result = 0.0;
+            return false;
+        }
+
+        private static bool TryGetInt(JsonObject obj, string propertyName, out int result)
+        {
+            var node = GetProperty(obj, propertyName);
+            if (node is JsonValue val)
+            {
+                if (val.TryGetValue<int>(out result))
+                {
+                    return true;
+                }
+
+                if (int.TryParse(val.ToString(), NumberStyles.Integer, CultureInfo.InvariantCulture, out result))
+                {
+                    return true;
+                }
+            }
+
+            result = 0;
+            return false;
+        }
+
+        private static bool TryGetString(JsonObject obj, string propertyName, out string result)
+        {
+            var node = GetProperty(obj, propertyName);
+            if (node != null)
+            {
+                result = node.ToString();
+                return !string.IsNullOrWhiteSpace(result);
+            }
+
+            result = string.Empty;
+            return false;
+        }
+    }
+}
